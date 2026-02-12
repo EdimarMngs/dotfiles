@@ -10,13 +10,11 @@ HYPHEN_INSENSITIVE="true"
 zstyle ':omz:update' mode reminder
 zstyle ':omz:update' frequency 15
 
-ENABLE_CORRECTION="true"
 COMPLETION_WAITING_DOTS="true"
 HIST_STAMPS="yyyy-mm-dd"
 
-plugins=(git)
+plugins=(git mvn)
 
-command -v tailscale >/dev/null && source <(tailscale completion zsh)
 command -v chezmoi >/dev/null && source <(chezmoi completion zsh)
 command -v bw >/dev/null && source <(bw completion --shell zsh)
 
@@ -25,3 +23,19 @@ source $ZSH/oh-my-zsh.sh
 if [ -f "$HOME/.config/.exports" ]; then
     source "$HOME/.config/.exports"
 fi
+
+gera_relatorio() {
+    local arquivo_temp=$(mktemp /tmp/relatorio_git.XXXXXX)
+
+    git status -s --no-renames | \
+    grep -vE '^\?\? (relatorio_git|.env)|.*\.properties|.*\.json|\.vscode/|environment\.ts' | \
+    sed -E 's/^[[:space:]]*M[[:space:]]+/Alterado -> /; s/^[[:space:]]*A[[:space:]]+/Adicionado -> /; s/^[[:space:]]*D[[:space:]]+/Removido -> /' \
+    > "$arquivo_temp"
+
+    code "$arquivo_temp"
+
+    echo "Relatório gerado em: $arquivo_temp"
+}
+
+source <(ng completion script)
+command -v tailscale >/dev/null && source <(tailscale completion zsh)
