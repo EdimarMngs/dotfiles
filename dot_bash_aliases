@@ -1,15 +1,15 @@
 #!/bin/bash
 
-if [ -d ~/.bash_completions ]; then
-    for file in ~/.bash_completions/*; do
-        [ -f "$file" ] && . "$file"
-    done
+set -e
+
+DOT_EXPORTS=/home/edimarsa/.config/.exports
+if [ -f "$DOT_EXPORTS" ]; then
+    # shellcheck source=/dev/null
+    . "$DOT_EXPORTS"
 fi
 
-if [ -f ~/.config/.exports ]; then
-    . ~/.config/.exports
-fi
-
-if [ -f /usr/share/doc/fzf/examples/key-bindings.bash ]; then
-    source /usr/share/doc/fzf/examples/key-bindings.bash
+KEY_BINDINGS=/usr/share/doc/fzf/examples/key-bindings.bash
+if [ -f "$KEY_BINDINGS" ]; then
+    # shellcheck source=/dev/null
+    source "$KEY_BINDINGS"
 fi

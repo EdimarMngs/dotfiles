@@ -1,25 +1,22 @@
-# Conta pessoal
-Host github.com-pessoal
-  HostName github.com
-  User git
-  IdentityFile ~/.ssh/ssh_github
+Host dev_vm
+    HostName 192.168.2.244
+    User edimarsa
+    IdentityFile ~/.ssh/dev_vm
 
-# Conta efscode
-Host github.com-efscode
-  HostName github.com
-  User git
-  IdentityFile ~/.ssh/efscode_github
+Host build_vm
+    HostName 192.168.2.242
+    User root
+    IdentityFile ~/.ssh/build_vm
 
+Host demo_vm
+    HostName 192.168.2.131
+    User demo
+    IdentityFile ~/.ssh/demo_vm
 
-# Direcionamento dos servidores
-# Prod server
-Host efscode-prod
-  HostName efscode-prod
-  User efscode
-  IdentityFile ~/.ssh/hostinger
+Host 192.168.2.131
+    HostName 192.168.2.131
+    User demo
+    IdentityFile ~/.ssh/demo_vm
 
-# Dev server
-Host efscode-dev
-  HostName edimar-Default-string
-  User edimar
-  IdentityFile ~/.ssh/iap_1000
+Host gitlab.local.mngs.com.br
+    StrictHostKeyChecking no
