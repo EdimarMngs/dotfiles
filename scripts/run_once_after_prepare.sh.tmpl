@@ -43,7 +43,6 @@ fi
 # ╰──────────────────────────────────────────────╯
 print_section "Atualizando sistema"
 touch "$HOME"/.hushlogin
-mkdir -p "$HOME/.pswds"
 sudo apt update && sudo apt upgrade -y
 sudo apt install -y bash-completion
 echo "✅ Sistema atualizado"
@@ -76,6 +75,7 @@ else
     sudo install -m 0755 -d /etc/apt/keyrings
     sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
     sudo chmod a+r /etc/apt/keyrings/docker.asc
+    # shellcheck source=/dev/null
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
       $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | \
       sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
@@ -112,8 +112,9 @@ print_section "Configuração Bitwarden"
 get_ssh_key() {
     local key_name="$1"
     local path="$HOME/.ssh/$key_name"
+    local raw_item=""
     if [[ ! -f "$path" ]]; then
-        local raw_item=$("$BW_BIN" get item "$key_name" --session "$BW_SESSION" --raw)
+        raw_item=$("$BW_BIN" get item "$key_name" --session "$BW_SESSION" --raw)
         echo "$raw_item" | jq -r '.notes' > "$path"
         echo "$raw_item" | jq -r '.fields[0].value' > "$path.pub"
         chmod 600 "$path" && chmod 644 "$path.pub"
@@ -132,11 +133,11 @@ if [[ "$BW_STATUS" == "unauthenticated" || "$BW_STATUS" == "locked" ]]; then
         BW_CMD=$([[ "$BW_STATUS" == "unauthenticated" ]] && echo "login" || echo "unlock")
         
         if [[ -f "$HOME/.pswds/bw" ]]; then
-            BW_SESSION=$("$BW_BIN" $BW_CMD --raw --passwordfile "$HOME/.pswds/bw")
+            BW_SESSION=$("$BW_BIN" "$BW_CMD" --raw --passwordfile "$HOME/.pswds/bw")
         elif [[ -n "$BW_PASSWORD" ]]; then
-            BW_SESSION=$("$BW_BIN" $BW_CMD --raw --passwordenv BW_PASSWORD)
+            BW_SESSION=$("$BW_BIN" "$BW_CMD" --raw --passwordenv BW_PASSWORD)
         else
-            BW_SESSION=$("$BW_BIN" $BW_CMD --raw)
+            BW_SESSION=$("$BW_BIN" "$BW_CMD" --raw)
         fi
     fi
 fi
@@ -147,23 +148,23 @@ if [[ -n "$BW_SESSION" ]]; then
     mkdir -p "$HOME"/.ssh && chmod 700 "$HOME"/.ssh
     
     echo "Buscando chaves SSH..."
-    for key in ssh_github dev_server efscode_github iap_1000; do
+    for key in acesso_build_vm acesso_demo_vm acesso_gitlab acesso_mngs_vm; do
         get_ssh_key "$key"
     done
 
     git config --global user.name "$GITHUB_USERNAME"
-    git config --global user.email "$("$BW_BIN" get username "ccffb181-84e2-4cd5-8d7a-b08200cb6bdb" --session "$BW_SESSION")"
+    git config --global user.email "$("$BW_BIN" get username "bee46207-f406-435f-8035-b3b0012258c1" --session "$BW_SESSION")"
     git config --global core.sshCommand "ssh -i ~/.ssh/ssh_github -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
     echo "✅ Configurações Bitwarden/SSH concluídas"
 else
     echo "⚠️  Bitwarden não disponível. Iniciando configuração manual do Git:"
-    read -p "👤 Username do Git [$GITHUB_USERNAME]: " manual_user
+    read -rp "👤 Username do Git [$GITHUB_USERNAME]: " manual_user
     git config --global user.name "${manual_user:-$GITHUB_USERNAME}"
 
-    read -p "📧 Email do Git: " manual_email
+    read -rp "📧 Email do Git: " manual_email
     [[ -n "$manual_email" ]] && git config --global user.email "$manual_email"
 
-    read -p "🔑 Path do arquivo SSH (ex: ~/.ssh/id_rsa): " manual_ssh
+    read -rp "🔑 Path do arquivo SSH (ex: ~/.ssh/id_rsa): " manual_ssh
     if [[ -f "${manual_ssh/#\~/$HOME}" ]]; then
         git config --global core.sshCommand "ssh -i ${manual_ssh/#\~/$HOME} -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
         echo "✅ SSH Path configurado."

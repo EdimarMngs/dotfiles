@@ -175,7 +175,8 @@
   "editor.autoClosingOvertype": "always",
   "editor.autoClosingQuotes": "always",
   "editor.minimap.enabled": false,
-  "editor.wordWrap": "bounded",
+  "editor.wordWrap": "on",
+  "zenMode.centerLayout": true,
   "[markdown]": {
     "editor.defaultFormatter": "yzhang.markdown-all-in-one"
   },
