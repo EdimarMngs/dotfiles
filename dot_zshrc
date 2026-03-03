@@ -25,17 +25,21 @@ if [ -f "$HOME/.config/.exports" ]; then
     source "$HOME/.config/.exports"
 fi
 
-gera_relatorio() {
-    local arquivo_temp=$(mktemp /tmp/relatorio_git.XXXXXX)
+gerar_relatorio() {
+  local current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+  local base=$(git config branch."$current_branch".vscode-merge-base || echo "origin/main")
+  local fork_point=$(git merge-base "$base" "$current_branch")
+  local temp_file=$(mktemp /tmp/"$current_branch"_git_report_XXXXXX.txt)
+  local ignore_pattern="node_modules/|target/|build/|dist/|\.gradle/|\.settings/|\.classpath|\.project|ios/Pods/|android/app/build/|package-lock\.json|yarn\.lock|pnpm-lock\.yaml|gradlew|gradlew\.bat|.*\.properties|\.vscode/|environment\.ts|*\.env"
 
-    git status -s --no-renames | \
-    grep -vE '^\?\? (relatorio_git|.env)|.*\.properties|.*\.json|\.vscode/|environment\.ts' | \
-    sed -E 's/^[[:space:]]*M[[:space:]]+/Alterado -> /; s/^[[:space:]]*A[[:space:]]+/Adicionado -> /; s/^[[:space:]]*D[[:space:]]+/Removido -> /' \
-    > "$arquivo_temp"
+  {
+    echo "### RELATÓRIO: $current_branch (Base: $base) ###"
+    echo "--------------------------------------------------"
+    
+    git log "$fork_point..HEAD" --name-only --pretty=format:"%n[COMMIT %h] %s%n%b%nArquivos:" | grep -Ev "$ignore_pattern"
+  } > "$temp_file"
 
-    code "$arquivo_temp"
-
-    echo "Relatório gerado em: $arquivo_temp"
+  ${EDITOR:-less} "$temp_file"
 }
 
 source <(ng completion script)
