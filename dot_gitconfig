@@ -18,8 +18,8 @@
 	undo-stash = restore projects/**/environment.ts .vscode/* package*.json
 	dev = switch development
 	cp = cherry-pick --no-commit
-  df = diff
-  br = branch
+	df = diff
+	br = branch
 	sw = switch
 	co = checkout
 	st = status -s
@@ -34,6 +34,7 @@
 	bl = blame --color-by-age --date=short --abbrev=4
 	aliases = config --get-regexp alias
 	discard-all = !git reset --hard HEAD && git clean -fd
+	apply-env = "!f() { git stash apply $(git stash list | grep 'envs_dev' | cut -d: -f1 | head -n 1); }; f"
 [fetch]
 	prune = true
 [rerere]
