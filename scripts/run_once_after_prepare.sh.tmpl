@@ -115,8 +115,8 @@ get_ssh_key() {
     local raw_item=""
     if [[ ! -f "$path" ]]; then
         raw_item=$("$BW_BIN" get item "$key_name" --session "$BW_SESSION" --raw)
-        echo "$raw_item" | jq -r '.notes' > "$path"
-        echo "$raw_item" | jq -r '.fields[0].value' > "$path.pub"
+        echo "$raw_item" | jq -r '.sshKey.privateKey' > "$path"
+        echo "$raw_item" | jq -r '.sshKey.publicKey' > "$path.pub"
         chmod 600 "$path" && chmod 644 "$path.pub"
         eval "$(ssh-agent -s)" >/dev/null 2>&1
         ssh-add "$path"
@@ -154,7 +154,7 @@ if [[ -n "$BW_SESSION" ]]; then
 
     git config --global user.name "$GITHUB_USERNAME"
     git config --global user.email "$("$BW_BIN" get username "bee46207-f406-435f-8035-b3b0012258c1" --session "$BW_SESSION")"
-    git config --global core.sshCommand "ssh -i ~/.ssh/ssh_github -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+    git config --global core.sshCommand "ssh -i ~/.ssh/acesso_gitlab"
     echo "✅ Configurações Bitwarden/SSH concluídas"
 else
     echo "⚠️  Bitwarden não disponível. Iniciando configuração manual do Git:"
@@ -166,7 +166,7 @@ else
 
     read -rp "🔑 Path do arquivo SSH (ex: ~/.ssh/id_rsa): " manual_ssh
     if [[ -f "${manual_ssh/#\~/$HOME}" ]]; then
-        git config --global core.sshCommand "ssh -i ${manual_ssh/#\~/$HOME} -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+        git config --global core.sshCommand "ssh -i ${manual_ssh/#\~/$HOME}"
         echo "✅ SSH Path configurado."
     fi
 fi

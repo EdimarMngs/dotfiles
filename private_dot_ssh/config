@@ -17,6 +17,3 @@ Host 192.168.2.131
     HostName 192.168.2.131
     User demo
     IdentityFile ~/.ssh/demo_vm
-
-Host gitlab.local.mngs.com.br
-    StrictHostKeyChecking no
