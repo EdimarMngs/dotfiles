@@ -129,7 +129,7 @@ for pkg in zsh neovim jq git keychain; do
             fi
             ;;
         keychain)
-            CURRENT_VERSION=$(keychain --version 2>/dev/null || echo "desconhecida")
+            CURRENT_VERSION=$(keychain --version 2>/dev/null | head -n1 || echo "desconhecida")
             log_info "Versão atual do keychain: $CURRENT_VERSION"
             sudo apt install --only-upgrade -y keychain
             log_success "keychain verificado/atualizado"
@@ -177,7 +177,7 @@ if [[ -d "$OH_MY_ZSH_DIR" ]]; then
     cd "$OH_MY_ZSH_DIR"
     BEFORE_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
 
-    git pull origin master 2>/dev/null || log_warning "Não foi ppossível atualizar Oh My Zsh"
+    git pull origin master 2>/dev/null || log_warning "Não foi possível atualizar Oh My Zsh"
 
     AFTER_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
 
@@ -193,7 +193,7 @@ else
 
     if [[ -f "$HOME/.zshrc" ]]; then
         log_info "Fazendo backup de .zshrc existente..."
-        cp "$HOME/.zshrc" "$HOME/.zshrc.bakup.$(date '+%Y%m%d%H%M%S')"
+        cp "$HOME/.zshrc" "$HOME/.zshrc.backup.$(date '+%Y%m%d%H%M%S')"
     fi
 
     log_info "Baixando e instalando Oh My Zsh..."
@@ -251,7 +251,7 @@ if command_exists docker; then
 
     log_info "Verificando atualizações do Docker..."
     sudo apt update
-    sudo apt install --only-upgrade -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    sudo apt install --only-upgrade -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin 2>/dev/null || true
 
     NEW_VERSION=$(docker --version | awk '{print $3}' | tr -d ',')
     if [[ "$CURRENT_VERSION" != "$NEW_VERSION" ]]; then
@@ -326,7 +326,7 @@ else
     curl -fsSL "https://bitwarden.com/download/?app=cli&platform=linux" -o "$BW_ZIP"
 
     log_info "Extraindo e instalando..."
-    sudo unzip -j "$BW_ZIP" bw -d "$USR_BIN"
+    sudo unzip -j "$BW_ZIP" bw -d /usr/local/bin
     sudo chmod +x "$BW_BIN"
     rm "$BW_ZIP"
 
@@ -348,59 +348,115 @@ get_ssh_key() {
     local key_name="$1"
     local key_path="$HOME/.ssh/$key_name"
 
+    log_info "Processando chave: $key_name"
+
     if [[ -f "$key_path" ]]; then
+        log_info "Arquivo $key_path encontrado. Validando..."
         if ssh-keygen -l -f "$key_path" >/dev/null 2>&1; then
-            log_info "Chave $key_name já existe e é válida"
+            log_success "Chave $key_name já existe e é válida"
             return 0
         else
             log_warning "Chave $key_name existe mas é inválida. Removendo..."
-            rm -f "$key_path" "$key_path.pub"
+            rm -f "$key_path" "$key_path.pub" || {
+                log_error "Falha ao remover chave inválida"
+                return 1
+            }
         fi
     fi
-    log_info "🔑 Recuperando chave do Bitwarden: $key_name"
-    local raw_item
-    raw_item=$("$BW_BIN" get item "$key_name" --raw 2>/dev/null)
 
-    if [[ -z "$raw_item" ]]; then
-        log_warning "Chave $key_name não encontrada no Bitwarden"
+    log_info "🔑 Buscando chave no Bitwarden: $key_name"
+
+    local raw_item
+    raw_item=$("$BW_BIN" get item "$key_name" --raw 2>&1)
+    local bw_exit_code=$?
+
+    if [[ $bw_exit_code -ne 0 ]]; then
+        log_warning "Erro ao buscar '$key_name' no Bitwarden (exit code: $bw_exit_code)"
+        log_info "Resposta do bw: ${raw_item:0:100}"
         return 1
     fi
 
-    log_info "Extraindo chave privada e pública..."
+    if [[ -z "$raw_item" || "$raw_item" == "null" ]]; then
+        log_warning "Chave $key_name não encontrada no Bitwarden (resposta vazia)"
+        return 1
+    fi
+
+    log_info "Item encontrado. Extraindo chaves..."
 
     if echo "$raw_item" | jq -e '.sshKey.privateKey' >/dev/null 2>&1; then
-        echo "$raw_item" | jq -r '.sshKey.privateKey' >"$key_path"
+        log_info "Usando formato .sshKey (tipo SSH Key nativo)"
+        echo "$raw_item" | jq -r '.sshKey.privateKey' >"$key_path" || {
+            log_error "Falha ao extrair chave privada"
+            return 1
+        }
 
         if echo "$raw_item" | jq -e '.sshKey.publicKey' >/dev/null 2>&1; then
-            echo "$raw_item" | jq -r '.sshKey.publicKey' >"$key_path.pub"
+            echo "$raw_item" | jq -r '.sshKey.publicKey' >"$key_path.pub" || {
+                log_warning "Falha ao extrair chave pública"
+            }
         fi
     else
-        echo "$raw_item" | jq -r '.notes' >"$key_path"
+        log_info "Usando formato alternativo (notes + fields)"
+
+        local notes_content
+        notes_content=$(echo "$raw_item" | jq -r '.notes // empty')
+
+        if [[ -z "$notes_content" || "$notes_content" == "null" ]]; then
+            log_error "Chave privada não encontrada em .notes"
+            return 1
+        fi
+
+        echo "$notes_content" >"$key_path" || {
+            log_error "Falha ao salvar chave privada"
+            return 1
+        }
+
         local pub_key
         pub_key=$(echo "$raw_item" | jq -r '.fields[]? | select(.name == "public_key" or .name == "publicKey" or .name == "public") | .value' 2>/dev/null | head -n1)
 
         if [[ -n "$pub_key" && "$pub_key" != "null" ]]; then
+            log_info "Chave pública encontrada em campo customizado"
             echo "$pub_key" >"$key_path.pub"
         else
-            pub_key=$(echo "$raw_item" | jq -r '.fields[0].value' 2>/dev/null)
+            pub_key=$(echo "$raw_item" | jq -r '.fields[0].value // empty' 2>/dev/null)
             if [[ -n "$pub_key" && "$pub_key" != "null" ]]; then
+                log_info "Chave pública encontrada no primeiro campo"
                 echo "$pub_key" >"$key_path.pub"
+            else
+                log_warning "Chave pública não encontrada nos campos"
             fi
         fi
     fi
 
-    if [[ ! -f "$key_path" ]] || [[ ! -s "$key_path" ]]; then
-        log_error "Falha ao criar chave $key_name"
+    if [[ ! -f "$key_path" ]]; then
+        log_error "Arquivo de chave não foi criado: $key_path"
+        return 1
+    fi
+
+    if [[ ! -s "$key_path" ]]; then
+        log_error "Arquivo de chave está vazio: $key_path"
+        rm -f "$key_path" "$key_path.pub"
         return 1
     fi
 
     log_info "Configurando permissões..."
-    chmod 600 "$key_path"
-    [[ -f "$key_path.pub" ]] && chmod 644 "$key_path.pub"
+    chmod 600 "$key_path" || {
+        log_error "Falha ao configurar permissões da chave privada"
+        return 1
+    }
 
+    if [[ -f "$key_path.pub" ]]; then
+        chmod 644 "$key_path.pub" || {
+            log_warning "Falha ao configurar permissões da chave pública"
+        }
+    fi
+
+    # Validar formato da chave
+    log_info "Validando formato da chave..."
     if ! ssh-keygen -l -f "$key_path" >/dev/null 2>&1; then
-        log_warning "Chave $key_name tem formato inválido"
+        log_error "Chave $key_name tem formato inválido"
         log_info "Primeira linha: $(head -n1 "$key_path" | cut -c1-60)..."
+        log_info "Tamanho do arquivo: $(wc -c <"$key_path") bytes"
         return 1
     fi
 
@@ -454,15 +510,24 @@ if [[ -n "$BW_SESSION" ]]; then
     KEYS_FOUND=0
     KEYS_FAILED=0
 
-    log_info "Buscando chaves SSH..."
+    log_info "Total de chaves a processar: ${#SSH_KEYS[@]}"
+
     for key in "${SSH_KEYS[@]}"; do
+        log_info "═══════════════════════════════════════════════"
+        log_info "Iniciando processamento da chave: $key"
+
         if get_ssh_key "$key"; then
-            ((KEYS_FOUND++))
+            ((KEYS_FOUND++)) || true
+            log_success "✓ Chave $key processada com sucesso (total: $KEYS_FOUND)"
         else
-            ((KEYS_FAILED++))
+            ((KEYS_FAILED++)) || true
+            log_warning "✗ Falha ao processar chave $key (total falhas: $KEYS_FAILED)"
         fi
+
+        log_info "Status: $KEYS_FOUND encontradas, $KEYS_FAILED falharam"
     done
 
+    log_info "═══════════════════════════════════════════════"
     log_success "Chaves processadas: $KEYS_FOUND encontradas, $KEYS_FAILED não encontradas"
 
     log_info "Configurando credenciais Git..."
@@ -495,9 +560,10 @@ print_section "Resumo da Execução"
 echo ""
 echo "📊 Ferramentas instaladas/atualizadas:"
 echo "   • Zsh:           $(zsh --version 2>/dev/null | awk '{print $2}' || echo 'N/A')"
-echo "   • Neovim:        $(nvim --version | head -n1 | awk '{print $2}')"
+echo "   • Neovim:        $(nvim --version 2>/dev/null | head -n1 | awk '{print $2}' || echo 'N/A')"
 echo "   • jq:            $(jq --version 2>&1 | grep -oP '\d+\.\d+' || echo 'N/A')"
-echo "   • Git:           $(git --version | awk '{print $3}')"
+echo "   • Git:           $(git --version 2>/dev/null | awk '{print $3}' || echo 'N/A')"
+echo "   • Keychain:      $(keychain --version 2>/dev/null | head -n1 | awk '{print $2}' || echo 'N/A')"
 echo "   • Docker:        $(docker --version 2>/dev/null | awk '{print $3}' | tr -d ',' || echo 'N/A')"
 echo "   • Bitwarden CLI: $("$BW_BIN" --version 2>/dev/null || echo 'N/A')"
 echo ""
@@ -522,8 +588,18 @@ if [[ -n "$BW_SESSION" ]]; then
     echo "   • user.name:  $(git config --global user.name || echo 'não configurado')"
     echo "   • user.email: $(git config --global user.email || echo 'não configurado')"
     echo ""
-    echo "🔑 Chaves SSH carregadas no ssh-agent:"
-    ssh-add -l 2>/dev/null || echo "   (nenhuma chave carregada)"
+
+    echo "🔑 Chaves SSH baixadas:"
+    for key in "${SSH_KEYS[@]}"; do
+        if [[ -f "$HOME/.ssh/$key" ]]; then
+            echo "   • $key ✓"
+        fi
+    done
+    echo ""
+
+    echo "💡 Dica: As chaves serão carregadas automaticamente pelo keychain no próximo login"
+    echo "   Adicione ao seu ~/.zshrc:"
+    echo "   eval \$(keychain --eval --quiet --agents ssh ${SSH_KEYS[*]})"
     echo ""
 fi
 
