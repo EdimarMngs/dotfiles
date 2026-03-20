@@ -337,13 +337,34 @@ fi
 # │ Acesso Bitwarden e SSH                       │
 # ╰──────────────────────────────────────────────╯
 print_section "Configuração Bitwarden e SSH"
+
 get_ssh_key() {
     local key_name="$1"
     local path="$HOME/.ssh/$key_name"
-    if [[ ! -f "$path" ]]; then
-        echo "🔑 Recuperando chave: $key_name"
+
+    if [[ -f "$path" ]]; then
+        log_info "Chave já existe: $key_name"
+
+        # Verificar se a chave já está adicionada ao ssh-agent
+        if ssh-add -l 2>/dev/null | grep -q "$path"; then
+            log_success "Chave $key_name já está no ssh-agent"
+        else
+            log_info "Adicionando chave $key_name ao ssh-agent..."
+            eval "$(ssh-agent -s)" >/dev/null 2>&1
+            ssh-add "$path" 2>/dev/null && log_success "Chave adicionada ao ssh-agent" || log_warning "Não foi possível adicionar a chave ao ssh-agent"
+        fi
+        return 0
+    else
+        log_info "🔑 Recuperando chave do Bitwarden: $key_name"
         local raw_item
         raw_item=$("$BW_BIN" get item "$key_name" --raw)
+
+        if [[ -z "$raw_item" ]]; then
+            log_warning "Chave $key_name não encontrada no Bitwarden"
+            return 1
+        fi
+
+        log_info "Extraindo chave privada e pública..."
         if echo "$raw_item" | jq -e '.sshKey' >/dev/null 2>&1; then
             echo "$raw_item" | jq -r '.sshKey.privateKey' >"$path"
             echo "$raw_item" | jq -r '.sshKey.publicKey' >"$path.pub"
@@ -351,50 +372,95 @@ get_ssh_key() {
             echo "$raw_item" | jq -r '.notes' >"$path"
             echo "$raw_item" | jq -r '.fields[0].value' >"$path.pub"
         fi
+
+        log_info "Configurando permissões..."
         chmod 600 "$path" && chmod 644 "$path.pub"
+
+        log_info "Adicionando ao ssh-agent..."
         eval "$(ssh-agent -s)" >/dev/null 2>&1
         ssh-add "$path"
-    else
-        echo "Chave já existe: $path"
+
+        log_success "Chave $key_name configurada com sucesso"
     fi
 }
 
 if [[ ! (-n "$BW_SESSION") ]]; then
+    log_info "Verificando status do Bitwarden..."
     BW_STATUS=$("$BW_BIN" status | jq -r '.status')
+    log_info "Status atual: $BW_STATUS"
     BW_SESSION=""
 
     if [[ "$BW_STATUS" == "unauthenticated" || "$BW_STATUS" == "locked" ]]; then
-        echo "🔐 Desbloqueando Bitwarden..."
+        log_info "🔐 Desbloqueando Bitwarden..."
         BW_CMD=$([[ "$BW_STATUS" == "unauthenticated" ]] && echo "login" || echo "unlock")
 
         if [[ -f "$HOME/.pswds/bw" ]]; then
+            log_info "Usando arquivo de senha: $HOME/.pswds/bw"
             BW_SESSION=$("$BW_BIN" "$BW_CMD" --raw --passwordfile "$HOME/.pswds/bw")
         elif [[ -n "$BW_PASSWORD" ]]; then
+            log_info "Usando variável de ambiente BW_PASSWORD"
             BW_SESSION=$("$BW_BIN" "$BW_CMD" --raw --passwordenv BW_PASSWORD)
         else
+            log_info "Solicitando senha interativamente..."
             BW_SESSION=$("$BW_BIN" "$BW_CMD" --raw)
         fi
+
+        if [[ -n "$BW_SESSION" ]]; then
+            log_success "Bitwarden desbloqueado com sucesso"
+        else
+            log_error "Falha ao desbloquear Bitwarden"
+        fi
     fi
+else
+    log_info "Sessão Bitwarden já está ativa"
 fi
 
 if [[ -n "$BW_SESSION" ]]; then
     export BW_SESSION="$BW_SESSION"
+
+    log_info "Sincronizando vault do Bitwarden..."
     "$BW_BIN" sync
+    log_success "Vault sincronizado"
+
+    log_info "Criando diretório .ssh..."
     mkdir -p "$HOME"/.ssh && chmod 700 "$HOME"/.ssh
 
+    log_info "Buscando chaves SSH do Bitwarden..."
+    SSH_KEYS=("ssh_github" "dev_server" "acesso_gitlab" "acesso_mngs_vm")
+    KEYS_FOUND=0
+    KEYS_FAILED=0
+
     echo "Buscando chaves SSH..."
-    for key in ssh_github dev_server acesso_gitlab acesso_mngs_vm; do
-        get_ssh_key "$key" || echo "⚠️ Chave $key não encontrada no Bitwarden."
+    for key in "${SSH_KEYS[@]}"; do
+        if get_ssh_key "$key"; then
+            ((KEYS_FOUND++))
+        else
+            ((KEYS_FAILED++))
+        fi
     done
 
-    GIT_USERNAME=$("$BW_BIN" get username "Redmine" 2>/dev/null || echo "")
-    [[ -n "$GIT_USERNAME" ]] && git config --global user.name "$GIT_USERNAME"
-    GIT_EMAIL=$("$BW_BIN" get username "Web Mail" 2>/dev/null || echo "")
-    [[ -n "$GIT_EMAIL" ]] && git config --global user.email "$GIT_EMAIL"
+    log_success "Chaves processadas: $KEYS_FOUND encontradas, $KEYS_FAILED não encontradas"
 
-    echo "✅ Configurações Bitwarden/SSH concluídas"
+    log_info "Configurando credenciais Git..."
+    GIT_USERNAME=$("$BW_BIN" get username "Redmine" 2>/dev/null || echo "")
+    if [[ -n "$GIT_USERNAME" ]]; then
+        git config --global user.name "$GIT_USERNAME"
+        log_success "Git user.name configurado: $GIT_USERNAME"
+    else
+        log_warning "Não foi possível recuperar username do Redmine"
+    fi
+
+    GIT_EMAIL=$("$BW_BIN" get username "Web Mail" 2>/dev/null || echo "")
+    if [[ -n "$GIT_EMAIL" ]]; then
+        git config --global user.email "$GIT_EMAIL"
+        log_success "Git user.email configurado: $GIT_EMAIL"
+    else
+        log_warning "Não foi possível recuperar email do Web Mail"
+    fi
+
+    log_success "Configurações Bitwarden/SSH concluídas"
 else
-    echo "⚠️ Bitwarden não disponível. Configure o Git manualmente se necessário."
+    log_warning "Bitwarden não disponível. Configure o Git manualmente se necessário."
 fi
 
 # ╭──────────────────────────────────────────────╮
