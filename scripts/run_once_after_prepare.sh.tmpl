@@ -83,7 +83,7 @@ log_success "Sistema atualizado e utilitários instalados"
 # ╭──────────────────────────────────────────────╮
 # │ Instalação de Ferramentas                    │
 # ╰──────────────────────────────────────────────╯
-for pkg in zsh neovim jq git; do
+for pkg in zsh neovim jq git keychain; do
     print_section "Processando: $pkg"
     if command_exists "$pkg"; then
         log_info "$pkg já está instalado. Verificando atualizações..."
@@ -127,6 +127,12 @@ for pkg in zsh neovim jq git; do
             else
                 log_success "Git já está na versão mais recente"
             fi
+            ;;
+        keychain)
+            CURRENT_VERSION=$(keychain --version 2>/dev/null || echo "desconhecida")
+            log_info "Versão atual do keychain: $CURRENT_VERSION"
+            sudo apt install --only-upgrade -y keychain
+            log_success "keychain verificado/atualizado"
             ;;
         esac
     else
@@ -340,48 +346,66 @@ print_section "Configuração Bitwarden e SSH"
 
 get_ssh_key() {
     local key_name="$1"
-    local path="$HOME/.ssh/$key_name"
+    local key_path="$HOME/.ssh/$key_name"
 
-    if [[ -f "$path" ]]; then
-        log_info "Chave já existe: $key_name"
-
-        # Verificar se a chave já está adicionada ao ssh-agent
-        if ssh-add -l 2>/dev/null | grep -q "$path"; then
-            log_success "Chave $key_name já está no ssh-agent"
+    if [[ -f "$key_path" ]]; then
+        if ssh-keygen -l -f "$key_path" >/dev/null 2>&1; then
+            log_info "Chave $key_name já existe e é válida"
+            return 0
         else
-            log_info "Adicionando chave $key_name ao ssh-agent..."
-            eval "$(ssh-agent -s)" >/dev/null 2>&1
-            ssh-add "$path" 2>/dev/null && log_success "Chave adicionada ao ssh-agent" || log_warning "Não foi possível adicionar a chave ao ssh-agent"
+            log_warning "Chave $key_name existe mas é inválida. Removendo..."
+            rm -f "$key_path" "$key_path.pub"
         fi
-        return 0
-    else
-        log_info "🔑 Recuperando chave do Bitwarden: $key_name"
-        local raw_item
-        raw_item=$("$BW_BIN" get item "$key_name" --raw)
-
-        if [[ -z "$raw_item" ]]; then
-            log_warning "Chave $key_name não encontrada no Bitwarden"
-            return 1
-        fi
-
-        log_info "Extraindo chave privada e pública..."
-        if echo "$raw_item" | jq -e '.sshKey' >/dev/null 2>&1; then
-            echo "$raw_item" | jq -r '.sshKey.privateKey' >"$path"
-            echo "$raw_item" | jq -r '.sshKey.publicKey' >"$path.pub"
-        else
-            echo "$raw_item" | jq -r '.notes' >"$path"
-            echo "$raw_item" | jq -r '.fields[0].value' >"$path.pub"
-        fi
-
-        log_info "Configurando permissões..."
-        chmod 600 "$path" && chmod 644 "$path.pub"
-
-        log_info "Adicionando ao ssh-agent..."
-        eval "$(ssh-agent -s)" >/dev/null 2>&1
-        ssh-add "$path"
-
-        log_success "Chave $key_name configurada com sucesso"
     fi
+    log_info "🔑 Recuperando chave do Bitwarden: $key_name"
+    local raw_item
+    raw_item=$("$BW_BIN" get item "$key_name" --raw 2>/dev/null)
+
+    if [[ -z "$raw_item" ]]; then
+        log_warning "Chave $key_name não encontrada no Bitwarden"
+        return 1
+    fi
+
+    log_info "Extraindo chave privada e pública..."
+
+    if echo "$raw_item" | jq -e '.sshKey.privateKey' >/dev/null 2>&1; then
+        echo "$raw_item" | jq -r '.sshKey.privateKey' >"$key_path"
+
+        if echo "$raw_item" | jq -e '.sshKey.publicKey' >/dev/null 2>&1; then
+            echo "$raw_item" | jq -r '.sshKey.publicKey' >"$key_path.pub"
+        fi
+    else
+        echo "$raw_item" | jq -r '.notes' >"$key_path"
+        local pub_key
+        pub_key=$(echo "$raw_item" | jq -r '.fields[]? | select(.name == "public_key" or .name == "publicKey" or .name == "public") | .value' 2>/dev/null | head -n1)
+
+        if [[ -n "$pub_key" && "$pub_key" != "null" ]]; then
+            echo "$pub_key" >"$key_path.pub"
+        else
+            pub_key=$(echo "$raw_item" | jq -r '.fields[0].value' 2>/dev/null)
+            if [[ -n "$pub_key" && "$pub_key" != "null" ]]; then
+                echo "$pub_key" >"$key_path.pub"
+            fi
+        fi
+    fi
+
+    if [[ ! -f "$key_path" ]] || [[ ! -s "$key_path" ]]; then
+        log_error "Falha ao criar chave $key_name"
+        return 1
+    fi
+
+    log_info "Configurando permissões..."
+    chmod 600 "$key_path"
+    [[ -f "$key_path.pub" ]] && chmod 644 "$key_path.pub"
+
+    if ! ssh-keygen -l -f "$key_path" >/dev/null 2>&1; then
+        log_warning "Chave $key_name tem formato inválido"
+        log_info "Primeira linha: $(head -n1 "$key_path" | cut -c1-60)..."
+        return 1
+    fi
+
+    log_success "Chave $key_name configurada com sucesso"
+    return 0
 }
 
 if [[ ! (-n "$BW_SESSION") ]]; then
@@ -426,11 +450,11 @@ if [[ -n "$BW_SESSION" ]]; then
     mkdir -p "$HOME"/.ssh && chmod 700 "$HOME"/.ssh
 
     log_info "Buscando chaves SSH do Bitwarden..."
-    SSH_KEYS=("ssh_github" "dev_server" "acesso_gitlab" "acesso_mngs_vm")
+    SSH_KEYS=("acesso_build_vm" "acesso_demo_vm" "acesso_gitlab" "acesso_mngs_vm")
     KEYS_FOUND=0
     KEYS_FAILED=0
 
-    echo "Buscando chaves SSH..."
+    log_info "Buscando chaves SSH..."
     for key in "${SSH_KEYS[@]}"; do
         if get_ssh_key "$key"; then
             ((KEYS_FOUND++))
@@ -492,7 +516,7 @@ else
     echo "   • Oh My Zsh:     Não instalado"
 fi
 echo ""
- 
+
 if [[ -n "$BW_SESSION" ]]; then
     echo "🔐 Configurações Git:"
     echo "   • user.name:  $(git config --global user.name || echo 'não configurado')"
@@ -502,7 +526,6 @@ if [[ -n "$BW_SESSION" ]]; then
     ssh-add -l 2>/dev/null || echo "   (nenhuma chave carregada)"
     echo ""
 fi
- 
+
 echo "🏁 Script concluído com sucesso em $(date '+%H:%M:%S')"
 log_info "Logs salvos na saída padrão"
-
