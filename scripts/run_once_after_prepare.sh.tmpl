@@ -596,11 +596,6 @@ if [[ -n "$BW_SESSION" ]]; then
         fi
     done
     echo ""
-
-    echo "💡 Dica: As chaves serão carregadas automaticamente pelo keychain no próximo login"
-    echo "   Adicione ao seu ~/.zshrc:"
-    echo "   eval \$(keychain --eval --quiet --agents ssh ${SSH_KEYS[*]})"
-    echo ""
 fi
 
 echo "🏁 Script concluído com sucesso em $(date '+%H:%M:%S')"
