@@ -47,3 +47,11 @@ gerar_relatorio() {
 command -v ng >/dev/null && source <(ng completion script)
 command -v tailscale >/dev/null && source <(tailscale completion zsh)
 command -v uv >/dev/null && source <(uv generate-shell-completion zsh)
+
+if command -v keychain &> /dev/null; then
+    eval $(keychain --eval --quiet --agents ssh \
+        acesso_build_vm \
+        acesso_demo_vm \
+        acesso_gitlab \
+        acesso_mngs_vm)
+fi
