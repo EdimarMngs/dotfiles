@@ -181,7 +181,7 @@
     "editor.defaultFormatter": "yzhang.markdown-all-in-one"
   },
   "[shellscript]": {
-    "editor.autoSurround": "quotes",
+    "editor.autoSurround": "quotes"
   },
   "shellformat.effectLanguages": [
     "shellscript",
@@ -217,13 +217,13 @@
       "source.organizeImports": "never"
     },
     "debug.saveBeforeStart": "allEditorsInActiveGroup",
-    "prettier.singleQuote": false,
+    "prettier.singleQuote": false
   },
   "[html]": {
     "editor.suggest.insertMode": "replace",
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "prettier.printWidth": 120,
-    "prettier.tabWidth": 4,
+    "prettier.tabWidth": 4
   },
   "[sql]": {
     "editor.defaultFormatter": "inferrinizzard.prettier-sql-vscode"
@@ -240,7 +240,7 @@
   },
   "todo-tree.highlights.enabled": false,
   "[java]": {
-    "editor.defaultFormatter": "redhat.java",
+    "editor.defaultFormatter": "redhat.java"
   },
   "java.debug.settings.maxStringLength": 0,
   "java.format.enabled": true,
@@ -283,7 +283,7 @@
     "TID252",
     "PLR0913",
     "PLR0917",
-    "PLR6301",
+    "PLR6301"
   ],
   "ruff.exclude": [
     "node_modules/",
