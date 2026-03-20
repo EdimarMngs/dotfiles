@@ -8,8 +8,17 @@ if [ -f "$DOT_EXPORTS" ]; then
     . "$DOT_EXPORTS"
 fi
 
+<<<<<<< Updated upstream
 KEY_BINDINGS=/usr/share/doc/fzf/examples/key-bindings.bash
 if [ -f "$KEY_BINDINGS" ]; then
     # shellcheck source=/dev/null
     source "$KEY_BINDINGS"
 fi
+||||||| constructed merge base
+source /usr/share/doc/fzf/examples/key-bindings.bash
+
+=======
+if [ -f /usr/share/doc/fzf/examples/key-bindings.bash ]; then
+    source /usr/share/doc/fzf/examples/key-bindings.bash
+fi
+>>>>>>> Stashed changes

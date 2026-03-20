@@ -120,6 +120,7 @@ if ! shopt -oq posix; then
   fi
 fi
 
+<<<<<<< Updated upstream
 if [ -f tailscale ]; then
     source <(tailscale completion bash)
 fi
@@ -127,3 +128,7 @@ fi
 if [ -f chezmoi ]; then
     source <(chezmoi completion bash)
 fi
+||||||| constructed merge base
+=======
+source <(tailscale completion bash)
+>>>>>>> Stashed changes

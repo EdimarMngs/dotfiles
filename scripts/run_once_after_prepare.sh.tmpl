@@ -39,6 +39,22 @@ if ! sudo -v 2>/dev/null; then
 fi
 
 # ╭──────────────────────────────────────────────╮
+# │ Validar Gerenciador de Pacotes               │
+# ╰──────────────────────────────────────────────╯
+if ! command_exists apt; then
+    echo "❌ Erro: Gerenciador de pacotes 'apt' não encontrado. Este script requer um sistema baseado em Debian/Ubuntu."
+    exit 1
+fi
+
+if ! sudo -n true 2>/dev/null; then
+    echo "🔐 Este script requer privilégios de sudo. Verifique suas permissões."
+    if ! sudo -v; then
+        echo "❌ Falha ao validar sudo. Finalizando."
+        exit 1
+    fi
+fi
+
+# ╭──────────────────────────────────────────────╮
 # │ Atualização do sistema                       │
 # ╰──────────────────────────────────────────────╯
 print_section "Atualizando sistema"
@@ -75,10 +91,26 @@ else
     sudo install -m 0755 -d /etc/apt/keyrings
     sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
     sudo chmod a+r /etc/apt/keyrings/docker.asc
+<<<<<<< Updated upstream
     # shellcheck source=/dev/null
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
       $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | \
       sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
+||||||| constructed merge base
+
+    echo \
+      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+      $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | \
+      sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+=======
+
+    echo \
+        "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+      $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" |
+        sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
+
+>>>>>>> Stashed changes
     sudo apt update
     sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
     sudo groupadd docker || true
@@ -101,15 +133,113 @@ else
     sudo unzip -j "$BW_ZIP" bw -d /usr/local/bin
     sudo chmod +x "$BW_BIN"
     rm "$BW_ZIP"
+<<<<<<< Updated upstream
     [[ ":$PATH:" != *":/usr/local/bin/:"* ]] && echo "export PATH=/usr/local/bin/:\$PATH" >>"$HOME/.bashrc"
+||||||| constructed merge base
+
+    # Adicionar ao PATH se necessário
+    if [[ ":$PATH:" != *":/usr/local/bin/:"* ]]; then
+        echo 'export PATH="/usr/local/bin/:$PATH"' >> "$HOME"/.bashrc
+    fi
+fi
+
+# ╭──────────────────────────────────────────────╮
+# │ Instalação do jq                             │
+# ╰──────────────────────────────────────────────╯
+print_section "Verificando Jq"
+if command_exists jq; then
+    echo "✅ jq já está instalado"
+else
+    echo "Instalando jq"
+    sudo apt install jq -y
+    echo "jq instalado"
+fi
+
+# ╭──────────────────────────────────────────────╮
+# │ Instalação do Git                            │
+# ╰──────────────────────────────────────────────╯
+print_section "Verificando Git"
+if command_exists git; then
+    echo "git já está instalado"
+else
+    echo "Instalando git"
+    sudo apt install git -y
+    echo "git instalado"
+=======
+
+    # Adicionar ao PATH se necessário
+    if [[ ":$PATH:" != *":/usr/local/bin/:"* ]]; then
+        echo "export PATH=/usr/local/bin/:$PATH" >>"$HOME/.bashrc"
+    fi
+fi
+
+# ╭──────────────────────────────────────────────╮
+# │ Instalação do jq                             │
+# ╰──────────────────────────────────────────────╯
+print_section "Verificando Jq"
+if command_exists jq; then
+    echo "✅ jq já está instalado"
+else
+    echo "Instalando jq"
+    sudo apt install jq -y
+    echo "jq instalado"
+fi
+
+# ╭──────────────────────────────────────────────╮
+# │ Instalação do Git                            │
+# ╰──────────────────────────────────────────────╯
+print_section "Verificando Git"
+if command_exists git; then
+    echo "git já está instalado"
+else
+    echo "Instalando git"
+    sudo apt install git -y
+    echo "git instalado"
+>>>>>>> Stashed changes
 fi
 
 # ╭──────────────────────────────────────────────╮
 # │ Acesso Bitwarden e SSH                       │
 # ╰──────────────────────────────────────────────╯
+<<<<<<< Updated upstream
 print_section "Configuração Bitwarden"
 
+||||||| constructed merge base
+print_section "Login bitwarden"
+BW_BIN=/usr/local/bin/bw
+
+if "$BW_BIN" status | grep -q "locked" > /dev/null 2>&1; then
+  echo "Bitwarden ja está logado, desbloqueando..."
+  BW_CMD="unlock"
+else
+  echo "Login no Bitwarden..."
+  BW_CMD="login"
+fi
+
+echo "Desbloqueando Bitwarden..."
+if [[ -f "$HOME/.pswds/bw" ]]; then
+  BW_SESSION=$("$BW_BIN" $BW_CMD --raw --passwordfile "$HOME/.pswds/bw")
+elif [[ -n "$BW_PASSWORD" ]]; then
+  BW_SESSION=$("$BW_BIN" $BW_CMD --raw --passwordenv BW_PASSWORD)
+else
+  BW_SESSION=$("$BW_BIN" $BW_CMD --raw)
+fi
+
+# Configura chave SSH
+mkdir -p "$HOME"/.ssh
+chmod 700 "$HOME"/.ssh
+
+export BW_SESSION=$BW_SESSION
+"$BW_BIN" sync
+
+# Extrai e configura as chaves SSH
+=======
+print_section "Login bitwarden"
+
+# Extrai e configura as chaves SSH
+>>>>>>> Stashed changes
 get_ssh_key() {
+<<<<<<< Updated upstream
     local key_name="$1"
     local path="$HOME/.ssh/$key_name"
     local raw_item=""
@@ -118,11 +248,39 @@ get_ssh_key() {
         echo "$raw_item" | jq -r '.sshKey.privateKey' > "$path"
         echo "$raw_item" | jq -r '.sshKey.publicKey' > "$path.pub"
         chmod 600 "$path" && chmod 644 "$path.pub"
+||||||| constructed merge base
+    local ssh_file_path="$HOME/.ssh/$1"
+    local ssh_file_path_pub="$HOME/.ssh/$1.pub"
+    if [[ ! -f "$ssh_file_path" ]]; then
+        "$BW_BIN" get item "$1" --session "$BW_SESSION" --raw | \
+            jq -r '.notes' > "$ssh_file_path"
+
+        "$BW_BIN" get item "$1" --session "$BW_SESSION" --raw | \
+            jq -r '.fields[0].value' > "$ssh_file_path_pub"
+
+        chmod 600 "$ssh_file_path"
+        chmod 644 "$ssh_file_path_pub"
+
+=======
+    local ssh_file_path="$HOME/.ssh/$1"
+    local ssh_file_path_pub="$HOME/.ssh/$1.pub"
+    if [[ ! -f "$ssh_file_path" ]]; then
+        "$BW_BIN" get item "$1" --session "$BW_SESSION" --raw |
+            jq -r '.notes' >"$ssh_file_path"
+
+        "$BW_BIN" get item "$1" --session "$BW_SESSION" --raw |
+            jq -r '.fields[0].value' >"$ssh_file_path_pub"
+
+        chmod 600 "$ssh_file_path"
+        chmod 644 "$ssh_file_path_pub"
+
+>>>>>>> Stashed changes
         eval "$(ssh-agent -s)" >/dev/null 2>&1
         ssh-add "$path"
     fi
 }
 
+<<<<<<< Updated upstream
 BW_STATUS=$("$BW_BIN" status | jq -r '.status')
 BW_SESSION=""
 
@@ -141,7 +299,73 @@ if [[ "$BW_STATUS" == "unauthenticated" || "$BW_STATUS" == "locked" ]]; then
         fi
     fi
 fi
+||||||| constructed merge base
+# Chaves de deploy do github
+echo "Buscando chaves ssh"
+get_ssh_key ssh_github
+get_ssh_key dev_server
+get_ssh_key efscode_github
+get_ssh_key iap_1000
+echo "Chaves recuperadas"
 
+# ╭──────────────────────────────────────────────╮
+# │ Configuração do git                          │
+# ╰──────────────────────────────────────────────╯
+print_section "Configurando git"
+
+# Adiciona cor em todas as saídas do Git
+git config --global color.ui auto
+
+# Exibe status com branch, alterações e resumo mais visual
+git config --global status.showUntrackedFiles all
+
+# Mostra o diff com palavras (útil para Markdown e texto)
+git config --global diff.compactionHeuristic true
+git config --global diff.mnemonicPrefix true
+git config --global diff.colorMoved zebra
+
+# Evita sobrescrever mudanças locais sem querer ao fazer pull
+git config --global pull.rebase false
+
+# Garante que você verá conflitos se alguém mudou o mesmo trecho
+git config --global merge.conflictstyle diff3
+
+# Resumo de log com gráfico de branches
+git config --global alias.lg "log --oneline --graph --decorate --all"
+
+# Reset seguro do último commit (mantém as mudanças)
+git config --global alias.undo "reset --soft HEAD~1"
+
+# Adiciona todos os arquivos e faz commit com mensagem
+git config --global alias.ac '!git add -A && git commit -m'
+=======
+if "$BW_BIN" status | grep -q "locked" >/dev/null 2>&1; then
+    echo "Bitwarden ja está logado, desbloqueando..."
+    BW_CMD="unlock"
+else
+    echo "Login no Bitwarden..."
+    BW_CMD="login"
+fi
+
+echo "Desbloqueando Bitwarden..."
+if [[ -f "$HOME/.pswds/bw" ]]; then
+    BW_SESSION=$("$BW_BIN" $BW_CMD --raw --passwordfile "$HOME/.pswds/bw")
+elif [[ -n "$BW_PASSWORD" ]]; then
+    BW_SESSION=$("$BW_BIN" $BW_CMD --raw --passwordenv BW_PASSWORD)
+else
+    BW_SESSION=$("$BW_BIN" $BW_CMD --raw)
+fi
+
+# Configura chave SSH
+mkdir -p "$HOME"/.ssh
+chmod 700 "$HOME"/.ssh
+
+if [[ -n "$BW_SESSION" ]]; then
+    export BW_SESSION=$BW_SESSION
+    "$BW_BIN" sync
+>>>>>>> Stashed changes
+
+<<<<<<< Updated upstream
 if [[ -n "$BW_SESSION" ]]; then
     export BW_SESSION
     "$BW_BIN" sync
@@ -151,7 +375,20 @@ if [[ -n "$BW_SESSION" ]]; then
     for key in acesso_build_vm acesso_demo_vm acesso_gitlab acesso_mngs_vm; do
         get_ssh_key "$key"
     done
+||||||| constructed merge base
+# Mostra qual branch remoto está sendo trackeado
+git config --global branch.autosetupmerge always
+=======
+    # Chaves de deploy do github
+    echo "Buscando chaves ssh"
+    get_ssh_key ssh_github
+    get_ssh_key dev_server
+    get_ssh_key efscode_github
+    get_ssh_key iap_1000
+    echo "Chaves recuperadas"
+>>>>>>> Stashed changes
 
+<<<<<<< Updated upstream
     git config --global user.name "$GITHUB_USERNAME"
     git config --global user.email "$("$BW_BIN" get username "bee46207-f406-435f-8035-b3b0012258c1" --session "$BW_SESSION")"
     git config --global core.sshCommand "ssh -i ~/.ssh/acesso_gitlab"
@@ -160,16 +397,45 @@ else
     echo "⚠️  Bitwarden não disponível. Iniciando configuração manual do Git:"
     read -rp "👤 Username do Git [$GITHUB_USERNAME]: " manual_user
     git config --global user.name "${manual_user:-$GITHUB_USERNAME}"
+||||||| constructed merge base
+# Cria aliases
+git config --global alias.st status
+git config --global alias.co checkout
+git config --global alias.cm 'commit -m'
+=======
+    # Configura usuário padrão para os commits
+    git config --global user.name "$GITHUB_USERNAME"
+    git config --global user.email "$("$BW_BIN" get username "ccffb181-84e2-4cd5-8d7a-b08200cb6bdb" --session "$BW_SESSION")"
+    git config --global core.sshCommand "ssh -i ~/.ssh/ssh_github -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+>>>>>>> Stashed changes
 
+<<<<<<< Updated upstream
     read -rp "📧 Email do Git: " manual_email
     [[ -n "$manual_email" ]] && git config --global user.email "$manual_email"
+||||||| constructed merge base
+# Configura usuário padrão para os commits
+git config --global user.name "$GITHUB_USERNAME"
+git config --global user.email $("$BW_BIN" get username "ccffb181-84e2-4cd5-8d7a-b08200cb6bdb" --session "$BW_SESSION")
+=======
+else
+    echo "⚠️  Bitwarden não disponível. Pulando chaves SSH e e-mail do Git."
+fi
+>>>>>>> Stashed changes
 
+<<<<<<< Updated upstream
     read -rp "🔑 Path do arquivo SSH (ex: ~/.ssh/id_rsa): " manual_ssh
     if [[ -f "${manual_ssh/#\~/$HOME}" ]]; then
         git config --global core.sshCommand "ssh -i ${manual_ssh/#\~/$HOME}"
         echo "✅ SSH Path configurado."
     fi
 fi
+||||||| constructed merge base
+# Dnado permissão de execução ao scripts pessoais
+chmod +x "$HOME"/scripts/personal_functions/*
+=======
+# Dnado permissão de execução ao scripts pessoais
+chmod +x "$HOME"/scripts/personal_functions/* 2>/dev/null || true
+>>>>>>> Stashed changes
 
 # ╭──────────────────────────────────────────────╮
 # │ Finalização                                  │
