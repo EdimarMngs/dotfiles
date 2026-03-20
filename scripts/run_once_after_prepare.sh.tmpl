@@ -119,7 +119,7 @@ get_ssh_key() {
     if [[ ! -f "$path" ]]; then
         echo "🔑 Recuperando chave: $key_name"
         local raw_item
-        raw_item=$("$BW_BIN" get item "$key_name" --session "$BW_SESSION" --raw)
+        raw_item=$("$BW_BIN" get item "$key_name" --raw)
         if echo "$raw_item" | jq -e '.sshKey' >/dev/null 2>&1; then
             echo "$raw_item" | jq -r '.sshKey.privateKey' >"$path"
             echo "$raw_item" | jq -r '.sshKey.publicKey' >"$path.pub"
@@ -130,27 +130,31 @@ get_ssh_key() {
         chmod 600 "$path" && chmod 644 "$path.pub"
         eval "$(ssh-agent -s)" >/dev/null 2>&1
         ssh-add "$path"
+    else
+        echo "Chave já existe: $path"
     fi
 }
 
-BW_STATUS=$("$BW_BIN" status | jq -r '.status')
-BW_SESSION=""
+if [[ ! (-n "$BW_SESSION") ]]; then
+    BW_STATUS=$("$BW_BIN" status | jq -r '.status')
+    BW_SESSION=""
 
-if [[ "$BW_STATUS" == "unauthenticated" || "$BW_STATUS" == "locked" ]]; then
-    echo "🔐 Desbloqueando Bitwarden..."
-    BW_CMD=$([[ "$BW_STATUS" == "unauthenticated" ]] && echo "login" || echo "unlock")
+    if [[ "$BW_STATUS" == "unauthenticated" || "$BW_STATUS" == "locked" ]]; then
+        echo "🔐 Desbloqueando Bitwarden..."
+        BW_CMD=$([[ "$BW_STATUS" == "unauthenticated" ]] && echo "login" || echo "unlock")
 
-    if [[ -f "$HOME/.pswds/bw" ]]; then
-        BW_SESSION=$("$BW_BIN" "$BW_CMD" --raw --passwordfile "$HOME/.pswds/bw")
-    elif [[ -n "$BW_PASSWORD" ]]; then
-        BW_SESSION=$("$BW_BIN" "$BW_CMD" --raw --passwordenv BW_PASSWORD)
-    else
-        BW_SESSION=$("$BW_BIN" "$BW_CMD" --raw)
+        if [[ -f "$HOME/.pswds/bw" ]]; then
+            BW_SESSION=$("$BW_BIN" "$BW_CMD" --raw --passwordfile "$HOME/.pswds/bw")
+        elif [[ -n "$BW_PASSWORD" ]]; then
+            BW_SESSION=$("$BW_BIN" "$BW_CMD" --raw --passwordenv BW_PASSWORD)
+        else
+            BW_SESSION=$("$BW_BIN" "$BW_CMD" --raw)
+        fi
     fi
 fi
 
 if [[ -n "$BW_SESSION" ]]; then
-    export BW_SESSION
+    export BW_SESSION="$BW_SESSION"
     "$BW_BIN" sync
     mkdir -p "$HOME"/.ssh && chmod 700 "$HOME"/.ssh
 
@@ -159,8 +163,9 @@ if [[ -n "$BW_SESSION" ]]; then
         get_ssh_key "$key" || echo "⚠️ Chave $key não encontrada no Bitwarden."
     done
 
-    git config --global user.name "$GITHUB_USERNAME"
-    GIT_EMAIL=$("$BW_BIN" get username "Web Mail" --session "$BW_SESSION" 2>/dev/null || echo "")
+    GIT_USERNAME=$("$BW_BIN" get username "Redmine" 2>/dev/null || echo "")
+    [[ -n "$GIT_USERNAME" ]] && git config --global user.name "$GIT_USERNAME"
+    GIT_EMAIL=$("$BW_BIN" get username "Web Mail" 2>/dev/null || echo "")
     [[ -n "$GIT_EMAIL" ]] && git config --global user.email "$GIT_EMAIL"
 
     echo "✅ Configurações Bitwarden/SSH concluídas"
