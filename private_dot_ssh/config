@@ -1,19 +1,24 @@
 Host dev_vm
     HostName 192.168.2.244
     User edimarsa
-    IdentityFile ~/.ssh/dev_vm
+    IdentityFile ~/.ssh/acesso_mngs_vm
 
 Host build_vm
     HostName 192.168.2.242
     User root
-    IdentityFile ~/.ssh/build_vm
+    IdentityFile ~/.ssh/acesso_build_vm
 
 Host demo_vm
     HostName 192.168.2.131
     User demo
-    IdentityFile ~/.ssh/demo_vm
+    IdentityFile ~/.ssh/acesso_demo_vm
 
 Host 192.168.2.131
     HostName 192.168.2.131
     User demo
-    IdentityFile ~/.ssh/demo_vm
+    IdentityFile ~/.ssh/acesso_demo_vm
+
+Host gitlab.local.mngs.com.br
+    HostName gitlab.local.mngs.com.br
+    User git
+    IdentityFile ~/.ssh/acesso_gitlab
