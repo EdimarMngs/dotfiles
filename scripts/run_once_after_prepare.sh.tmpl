@@ -464,8 +464,45 @@ else
 fi
 
 # ╭──────────────────────────────────────────────╮
-# │ Finalização                                  │
+# │ Finalização e Resumo                         │
 # ╰──────────────────────────────────────────────╯
-print_section "Finalizando"
+print_section "Resumo da Execução"
 
-echo "🏁 Script concluído com sucesso."
+echo ""
+echo "📊 Ferramentas instaladas/atualizadas:"
+echo "   • Zsh:           $(zsh --version 2>/dev/null | awk '{print $2}' || echo 'N/A')"
+echo "   • Neovim:        $(nvim --version | head -n1 | awk '{print $2}')"
+echo "   • jq:            $(jq --version 2>&1 | grep -oP '\d+\.\d+' || echo 'N/A')"
+echo "   • Git:           $(git --version | awk '{print $3}')"
+echo "   • Docker:        $(docker --version 2>/dev/null | awk '{print $3}' | tr -d ',' || echo 'N/A')"
+echo "   • Bitwarden CLI: $("$BW_BIN" --version 2>/dev/null || echo 'N/A')"
+echo ""
+
+echo "🐚 Configuração do Shell:"
+echo "   • Shell padrão:  $(basename "$SHELL")"
+if [[ -d "$HOME/.oh-my-zsh" ]]; then
+    echo "   • Oh My Zsh:     Instalado"
+    if [[ -d "$HOME/.oh-my-zsh/custom/plugins/zsh-autosuggestions" ]]; then
+        echo "   • Plugins:       zsh-autosuggestions ✓"
+    fi
+    if [[ -d "$HOME/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting" ]]; then
+        echo "                    zsh-syntax-highlighting ✓"
+    fi
+else
+    echo "   • Oh My Zsh:     Não instalado"
+fi
+echo ""
+ 
+if [[ -n "$BW_SESSION" ]]; then
+    echo "🔐 Configurações Git:"
+    echo "   • user.name:  $(git config --global user.name || echo 'não configurado')"
+    echo "   • user.email: $(git config --global user.email || echo 'não configurado')"
+    echo ""
+    echo "🔑 Chaves SSH carregadas no ssh-agent:"
+    ssh-add -l 2>/dev/null || echo "   (nenhuma chave carregada)"
+    echo ""
+fi
+ 
+echo "🏁 Script concluído com sucesso em $(date '+%H:%M:%S')"
+log_info "Logs salvos na saída padrão"
+
