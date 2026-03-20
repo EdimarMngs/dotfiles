@@ -20,7 +20,7 @@ require("neo-tree").setup({
         indent_marker = "│",
         last_indent_marker = "└",
         highlight = "NeoTreeIndentMarker",
-        with_expanders = nil,
+        with_expanders = true,
         expander_collapsed = "",
         expander_expanded = "",
         expander_highlight = "NeoTreeExpander",
@@ -128,7 +128,6 @@ require("neo-tree").setup({
         visible = false,
         hide_dotfiles = true,
         hide_gitignored = true,
-        hide_hidden = true,
         hide_by_name = {
           --"node_modules"
         },
