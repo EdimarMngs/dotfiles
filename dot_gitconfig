@@ -1,5 +1,3 @@
-[core]
-	sshCommand = ssh -i ~/.ssh/acesso_gitlab
 [color]
 	ui = auto
 [status]
