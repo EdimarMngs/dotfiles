@@ -237,15 +237,34 @@ log_success "Configuração do Zsh concluída"
 # ╭──────────────────────────────────────────────╮
 # │ Instalar/Atualizar Docker                    │
 # ╰──────────────────────────────────────────────╯
-print_section "Verificando Docker"
+print_section "Processando: Docker"
 if command_exists docker; then
-    echo "✅ Docker já está instalado"
+    log_info "Docker já está instalado"
+    CURRENT_VERSION=$(docker --version | awk '{print $3}' | tr -d ',')
+    log_info "Versão atual do Docker: $CURRENT_VERSION"
+
+    log_info "Verificando atualizações do Docker..."
+    sudo apt update
+    sudo apt install --only-upgrade -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+    NEW_VERSION=$(docker --version | awk '{print $3}' | tr -d ',')
+    if [[ "$CURRENT_VERSION" != "$NEW_VERSION" ]]; then
+        log_success "Docker atualizado: $CURRENT_VERSION → $NEW_VERSION"
+    else
+        log_success "Docker já está na versão mais recente"
+    fi
 else
-    echo "📦 Instalando Docker..."
+    log_install "Docker..."
+
+    log_info "Removendo pacotes conflitantes..."
     for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc; do
-        sudo apt remove -y $pkg || true
+        sudo apt remove -y $pkg 2>/dev/null || true
     done
+
+    log_install "certificados CA..."
     sudo apt install -y ca-certificates
+
+    log_info "Configurando repositório Docker"
     sudo install -m 0755 -d /etc/apt/keyrings
     sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
     sudo chmod a+r /etc/apt/keyrings/docker.asc
@@ -255,35 +274,63 @@ else
       $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" |
         sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
 
+    log_info "Atualizando lista de pacotes..."
     sudo apt update
+
+    log_install "componentes Docker..."
     sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-    sudo groupadd docker || true
+
+    log_info "Configurando grupo docker..."
+    sudo groupadd docker 2>/dev/null || true
     sudo usermod -aG docker "$USER"
-    echo "✅ Docker instalado"
+
+    INSTALLED_VERSION=$(docker --version | awk '{print $3}' | tr -d ',')
+    log_success "Docker instalado com sucesso: $INSTALLED_VERSION"
+    log_warning "Você precisará fazer logout/login para usar Docker sem sudo"
 fi
 
 # ╭──────────────────────────────────────────────╮
 # │ Instalar Bitwarden CLI                       │
 # ╰──────────────────────────────────────────────╯
-print_section "Verificando Bitwarden CLI"
-USR_BIN=/usr/local/bin
-BW_BIN="$USR_BIN"/bw
+print_section "Processando: Bitwarden CLI"
+BW_BIN=/usr/local/bin/bw
+
 if command_exists bw; then
-    echo "Verificando atualizações do Bitwarden CLI..."
-    "$BW_BIN" update
-    echo "✅ Bitwarden CLI atualizado"
+    log_info "Bitwarden CLI já está instalado"
+    CURRENT_VERSION=$("$BW_BIN" --version 2>/dev/null || echo "desconhecida")
+    log_info "Versão atual: $CURRENT_VERSION"
+
+    log_info "Verificando atualizações do Bitwarden CLI..."
+    UPDATE_OUTPUT=$("$BW_BIN" update 2>&1 || true)
+
+    if echo "$UPDATE_OUTPUT" | grep -q "Updated"; then
+        NEW_VERSION=$("$BW_BIN" --version)
+        log_success "Bitwarden CLI atualizado: $CURRENT_VERSION → $NEW_VERSION"
+    elif echo "$UPDATE_OUTPUT" | grep -q "up to date"; then
+        log_success "Bitwarden CLI já está na versão mais recente"
+    else
+        log_info "Resultado da verificação: $UPDATE_OUTPUT"
+    fi
 else
-    echo "📦 Instalando Bitwarden CLI..."
-    sudo mkdir -p "$USR_BIN"
+    log_install "Bitwarden CLI..."
+    sudo mkdir -p /usr/local/bin
+
+    log_info "Baixando Bitwarden CLI..."
     BW_ZIP=$(mktemp)
     curl -fsSL "https://bitwarden.com/download/?app=cli&platform=linux" -o "$BW_ZIP"
+
+    log_info "Extraindo e instalando..."
     sudo unzip -j "$BW_ZIP" bw -d "$USR_BIN"
     sudo chmod +x "$BW_BIN"
     rm "$BW_ZIP"
 
-    if [[ ":$PATH:" != *":$USR_BIN:"* ]]; then
-        echo 'export PATH=""$USR_BIN":$PATH"' >>"$HOME/.bashrc"
+    if [[ ":$PATH:" != *":/usr/local/bin:"* ]]; then
+        log_info "Adicionando /usr/local/bin ao PATH..."
+        echo 'export PATH="/usr/local/bin:$PATH"' >>"$HOME/.bashrc"
     fi
+
+    INSTALLED_VERSION=$("$BW_BIN" --version)
+    log_success "Bitwarden CLI instalado com sucesso: $INSTALLED_VERSION"
 fi
 
 # ╭──────────────────────────────────────────────╮
