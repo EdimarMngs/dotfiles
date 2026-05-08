@@ -49,8 +49,11 @@ criar_banco_limpo() {
   local db_output_path="$HOME/.config/.db_output"
 
   mkdir -p "$db_output_path"
-  rm -f "$db_output_path"/*
-  cp -r "$db_clear_path/"* "$db_output_path/"
+
+  rm -rf "$db_output_path"
+  mkdir -p "$db_output_path"
+
+  cp -r "$db_clear_path/." "$db_output_path/"
 }
 
 command -v ng >/dev/null && source <(ng completion script)
