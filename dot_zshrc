@@ -22,7 +22,7 @@ command -v bw >/dev/null && source <(bw completion --shell zsh)
 source $ZSH/oh-my-zsh.sh
 
 if [ -f "$HOME/.config/.exports" ]; then
-    source "$HOME/.config/.exports"
+  source "$HOME/.config/.exports"
 fi
 
 gerar_relatorio() {
@@ -37,21 +37,30 @@ gerar_relatorio() {
     echo "### RELATÓRIO: $current_branch (Base: $base)"
     echo "### CAMINHO: $temp_file"
     echo "--------------------------------------------------"
-    
+
     git log "$fork_point..HEAD" --name-only --pretty=format:"%n[COMMIT %h] %s%n%b%nArquivos:" | grep -Ev "$ignore_pattern"
-  } > "$temp_file"
+  } >"$temp_file"
 
   ${EDITOR:-less} "$temp_file"
+}
+
+criar_banco_limpo() {
+  local db_clear_path="/home/edimarsa/Documents/Bases limpas"
+  local db_output_path="$HOME/.config/.db_output"
+
+  mkdir -p "$db_output_path"
+  rm -f "$db_output_path"/*
+  cp -r "$db_clear_path/"* "$db_output_path/"
 }
 
 command -v ng >/dev/null && source <(ng completion script)
 command -v tailscale >/dev/null && source <(tailscale completion zsh)
 command -v uv >/dev/null && source <(uv generate-shell-completion zsh)
 
-if command -v keychain &> /dev/null; then
-    eval $(keychain --eval --quiet --agents ssh \
-        acesso_build_vm \
-        acesso_demo_vm \
-        acesso_gitlab \
-        acesso_mngs_vm)
+if command -v keychain &>/dev/null; then
+  eval $(keychain --eval --quiet --agents ssh \
+    acesso_build_vm \
+    acesso_demo_vm \
+    acesso_gitlab \
+    acesso_mngs_vm)
 fi
