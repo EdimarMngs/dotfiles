@@ -45,15 +45,18 @@ gerar_relatorio() {
 }
 
 criar_banco_limpo() {
-  local db_clear_path="/home/edimarsa/Documents/Bases limpas"
+  local db_clear_path="/home/edimarsa/Documents/banco_limpo"
   local db_output_path="$HOME/.config/.db_output"
 
-  mkdir -p "$db_output_path"
+  setopt local_options rmstarsilent nonomatch
 
-  rm -rf "$db_output_path"
   mkdir -p "$db_output_path"
+  rm -f "$db_output_path"/* 2>/dev/null
 
-  cp -r "$db_clear_path/." "$db_output_path/"
+  cp -rfp "$db_clear_path"/* "$db_output_path"
+
+  echo "---"
+  echo "Processo finalizado em $db_output_path"
 }
 
 command -v ng >/dev/null && source <(ng completion script)
