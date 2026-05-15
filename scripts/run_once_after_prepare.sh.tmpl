@@ -538,12 +538,6 @@ echo "🐚 Configuração do Shell:"
 echo "   • Shell padrão:  $(basename "$SHELL")"
 if [[ -d "$HOME/.oh-my-zsh" ]]; then
     echo "   • Oh My Zsh:     Instalado"
-    if [[ -d "$HOME/.oh-my-zsh/custom/plugins/zsh-autosuggestions" ]]; then
-        echo "   • Plugins:       zsh-autosuggestions ✓"
-    fi
-    if [[ -d "$HOME/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting" ]]; then
-        echo "                    zsh-syntax-highlighting ✓"
-    fi
 else
     echo "   • Oh My Zsh:     Não instalado"
 fi
