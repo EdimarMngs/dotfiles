@@ -36,7 +36,7 @@
 	discard-all = !git reset --hard HEAD && git clean -fd
 	apply-env = "!f() { git stash apply $(git stash list | grep 'envs_dev' | cut -d: -f1 | head -n 1); }; f"
 	unapply-env = "!f() { git restore $(git show --pretty='' --name-only $(git stash list | grep 'envs_dev' | cut -d: -f1 | head -n 1)); }; f"
-	stash-env = "!f() { git stash drop $(git stash list | grep 'envs_dev' | cut -d: -f1 | head -n 1); git stash save -m 'envs_dev'; }; f"
+	stash-env = "!f() { git stash drop $(git stash list | grep 'envs_dev' | cut -d: -f1 | head -n 1); git stash save -m 'envs_dev' --include-untracked; }; f"
 [fetch]
 	prune = true
 [rerere]
