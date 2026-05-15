@@ -35,7 +35,15 @@
 	aliases = config --get-regexp alias
 	discard-all = !git reset --hard HEAD && git clean -fd
 	apply-env = "!f() { git stash apply $(git stash list | grep 'envs_dev' | cut -d: -f1 | head -n 1); }; f"
-	unapply-env = "!f() { git restore $(git show --pretty='' --name-only $(git stash list | grep 'envs_dev' | cut -d: -f1 | head -n 1)); }; f"
+	unapply-env = "!f() { \
+    ID=$(git stash list | grep 'envs_dev' | cut -d: -f1 | head -n 1); \
+    if [ -n \"$ID\" ]; then \
+        files=$( { git show --pretty='' --name-only $ID; git show --pretty='' --name-only $ID^3 2>/dev/null; } | tr '\\n' ' ' ); \
+        if [ -n \"$files\" ]; then \
+            git restore $files; \
+        fi; \
+    fi; \
+}; f"
 	stash-env = "!f() { git stash drop $(git stash list | grep 'envs_dev' | cut -d: -f1 | head -n 1); git stash save -m 'envs_dev' --include-untracked; }; f"
 [fetch]
 	prune = true
