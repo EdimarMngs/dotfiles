@@ -22,3 +22,8 @@ Host gitlab.local.mngs.com.br
     HostName gitlab.local.mngs.com.br
     User git
     IdentityFile ~/.ssh/acesso_gitlab
+
+Host github.com/EdimarMngs
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/GitHubKey
