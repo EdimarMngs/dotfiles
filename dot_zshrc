@@ -56,6 +56,10 @@ criar_banco_limpo() {
 
   echo "---"
   echo "Processo finalizado em $db_output_path"
+  echo "Arquivos criados:"
+  for file in $(ls $db_output_path); do 
+    echo "$db_output_path/$file"
+  done
 }
 
 command -v ng >/dev/null && source <(ng completion script)
