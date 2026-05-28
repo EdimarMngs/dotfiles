@@ -44,6 +44,7 @@ gerar_relatorio() {
 }
 
 criar_banco_limpo() {
+  sudo systemctl stop firebird.service
   local db_clear_path="/home/edimarsa/Documents/banco_limpo"
   local db_output_path="$HOME/.config/.db_output"
 
@@ -53,6 +54,8 @@ criar_banco_limpo() {
   rm -f "$db_output_path"/* 2>/dev/null
 
   cp -rfp "$db_clear_path"/* "$db_output_path"
+
+  sudo systemctl start firebird.service
 
   echo "---"
   echo "Processo finalizado em $db_output_path"
