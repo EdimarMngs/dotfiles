@@ -6,6 +6,6 @@ export DEV_CONTAINER=0
 export EDITOR=code
 export MNG_CFGDIR=/home/edimarsa/config
 
-if [ -f "$HOME/scripts/personal_functions/" ]; then
-    export PATH="$PATH:$HOME/scripts/personal_functions/"
+if [ -d "$HOME/scripts/personal_functions" ]; then
+    export PATH="$PATH:$HOME/scripts/personal_functions"
 fi
