@@ -3,7 +3,7 @@
 # Github
 export GITHUB_USERNAME="EdimarMngs"
 export DEV_CONTAINER=0
-export EDITOR=code
+export EDITOR="code --wait"
 export MNG_CFGDIR=/home/edimarsa/config
 
 if [ -d "$HOME/scripts/personal_functions" ]; then
