@@ -19,7 +19,7 @@
   // EXPLORER SETTINGS
   "explorer.autoReveal": false,
   "explorer.compactFolders": true,
-  "explorer.confirmDragAndDrop": true,
+  "explorer.confirmDragAndDrop": false,
   "explorer.incrementalNaming": "smart",
   // SEARCH SETTINGS
   "search.collapseResults": "alwaysCollapse",
@@ -238,7 +238,7 @@
   "[plantuml]": {
     "editor.defaultFormatter": "jebbs.plantuml"
   },
-  "todo-tree.highlights.enabled": false,
+  "todo-tree.highlights.enabled": true,
   "[java]": {
     "editor.defaultFormatter": "redhat.java"
   },
