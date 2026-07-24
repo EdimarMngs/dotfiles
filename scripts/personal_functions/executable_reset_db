@@ -1,5 +1,4 @@
 #!/bin/bash
-# /usr/local/bin/reset_db
 set -e
 
 DB_CLEAR_PATH="$HOME/Documents/banco_limpo"

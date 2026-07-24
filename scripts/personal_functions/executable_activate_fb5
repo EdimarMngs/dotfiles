@@ -1,11 +1,11 @@
 #!/bin/bash
-# /usr/local/bin/activate_fb5
 set -euo pipefail
 
 FB_HOME="/opt/firebird5.0"
 LIB="$FB_HOME/lib"
 OWN_SERVICE="firebird5.0-superserver.service"
 OTHER_SERVICE="firebird3.0-superserver.service"
+DB_OUTPUT_PATH="$HOME/.config/.db_output"
 
 echo "Parando instância 3.0 (se estiver rodando)..."
 sudo systemctl stop "$OTHER_SERVICE" 2>/dev/null || true
@@ -20,6 +20,14 @@ sudo ldconfig
 
 echo "Subindo Firebird 5.0..."
 sudo systemctl start "$OWN_SERVICE"
-sudo systemctl status "$OWN_SERVICE" --no-pager
 
+echo "Ajustando mngctlpnt.fdb para versão 5.0..."
+if [[ -f "$DB_OUTPUT_PATH/mngctlpnt5.0.fdb" ]]; then
+    rm -f "$DB_OUTPUT_PATH/mngctlpnt.fdb"
+    cp -p "$DB_OUTPUT_PATH/mngctlpnt5.0.fdb" "$DB_OUTPUT_PATH/mngctlpnt.fdb"
+else
+    echo "Aviso: mngctlpnt5.0.fdb não encontrado em $DB_OUTPUT_PATH, pulando."
+fi
+
+sudo systemctl status "$OWN_SERVICE" --no-pager
 echo "Firebird ativo: 5.0 ($FB_HOME) — porta 3050"
