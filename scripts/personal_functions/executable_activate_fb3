@@ -4,16 +4,22 @@ set -euo pipefail
 
 FB_HOME="/opt/firebird3.0"
 LIB="$FB_HOME/lib"
+OWN_SERVICE="firebird3.0-superserver.service"
+OTHER_SERVICE="firebird5.0-superserver.service"
 
-echo "Limpando links antigos em /usr/lib..."
+echo "Parando instância 5.0 (se estiver rodando)..."
+sudo systemctl stop "$OTHER_SERVICE" 2>/dev/null || true
+
+echo "Ajustando links de libfbclient para 3.0..."
 sudo find /usr/lib -maxdepth 1 -name 'libfbclient.so*' -exec rm -f {} \;
-
-echo "Recriando links apontando para $FB_HOME..."
 for f in "$LIB"/libfbclient.so*; do
     name=$(basename "$f")
     sudo ln -sf "$f" "/usr/lib/$name"
-    echo "  /usr/lib/$name -> $f"
 done
-
 sudo ldconfig
-echo "Firebird client ativo: 3.0 ($FB_HOME)"
+
+echo "Subindo Firebird 3.0..."
+sudo systemctl start "$OWN_SERVICE"
+sudo systemctl status "$OWN_SERVICE" --no-pager
+
+echo "Firebird ativo: 3.0 ($FB_HOME) — porta 3050"

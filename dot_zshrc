@@ -43,28 +43,6 @@ gerar_relatorio() {
   ${EDITOR:-less} "$temp_file"
 }
 
-criar_banco_limpo() {
-  sudo systemctl stop firebird.service
-  local db_clear_path="/home/edimarsa/Documents/banco_limpo"
-  local db_output_path="$HOME/.config/.db_output"
-
-  setopt local_options rmstarsilent nonomatch
-
-  mkdir -p "$db_output_path"
-  rm -f "$db_output_path"/* 2>/dev/null
-
-  cp -rfp "$db_clear_path"/* "$db_output_path"
-
-  sudo systemctl start firebird.service
-
-  echo "---"
-  echo "Processo finalizado em $db_output_path"
-  echo "Arquivos criados:"
-  for file in $(ls $db_output_path); do 
-    echo "$db_output_path/$file"
-  done
-}
-
 command -v ng >/dev/null && source <(ng completion script)
 command -v tailscale >/dev/null && source <(tailscale completion zsh)
 command -v uv >/dev/null && source <(uv generate-shell-completion zsh)
