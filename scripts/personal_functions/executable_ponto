@@ -1,20 +1,65 @@
-#!/usr/bin/env bash
-
+#!/usr/bin/bash
 set -euo pipefail
 
 # Força a conversão em UTC para ignorar o fuso horário local (UTC-3, etc)
 to_seconds() {
     date -u -d "1970-01-01 $1:00" +%s
 }
-
 to_time() {
     date -u -d "@$1" +%H:%M
 }
 
-if [ "$#" -lt 2 ]; then
-    echo "Uso: $0 <HH:MM entrada> <HH:MM ida_almoco> [HH:MM retorno_almoco] [HH:MM expediente]"
+# Converte um valor de banco de horas (ex: -00:05, +00:15, 00:30) em segundos com sinal
+parse_banco() {
+    local val="$1"
+    local sign="+"
+    if [[ "$val" == -* ]]; then
+        sign="-"
+        val="${val#-}"
+    elif [[ "$val" == +* ]]; then
+        sign="+"
+        val="${val#+}"
+    fi
+    local h m secs
+    h=$(echo "$val" | cut -d: -f1)
+    m=$(echo "$val" | cut -d: -f2)
+    secs=$(( (10#$h * 3600) + (10#$m * 60) ))
+    if [ "$sign" == "-" ]; then
+        secs=$(( -secs ))
+    fi
+    echo "$secs"
+}
+
+uso() {
+    echo "Uso: $0 [-b [+/-]HH:MM] <HH:MM entrada> <HH:MM ida_almoco> [HH:MM retorno_almoco] [HH:MM expediente]"
     echo "Exemplo: $0 08:07 12:12"
+    echo "Exemplo com banco de horas negativo (deve 5min): $0 -b -00:05 08:07 12:12"
+    echo "Exemplo com banco de horas positivo (15min de crédito): $0 -b +00:15 08:07 12:12"
     exit 1
+}
+
+BANCO_SECS=0
+ARGS=()
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        -b)
+            if [ -z "${2:-}" ]; then
+                echo "Erro: -b requer um valor, ex: -b -00:05"
+                exit 1
+            fi
+            BANCO_SECS=$(parse_banco "$2")
+            shift 2
+            ;;
+        *)
+            ARGS+=("$1")
+            shift
+            ;;
+    esac
+done
+set -- "${ARGS[@]:-}"
+
+if [ "$#" -lt 2 ] || [ -z "${1:-}" ]; then
+    uso
 fi
 
 HORA_ENTRADA="$1"
@@ -40,9 +85,21 @@ fi
 
 # Cálculo da saída
 TRABALHADO_MANHA=$(( ALMOCO_SECS - ENTRADA_SECS ))
-RESTANTE_EXPEDIENTE=$(( EXP_SECS - TRABALHADO_MANHA ))
+# Banco negativo (deve horas) aumenta o tempo restante; banco positivo (crédito) diminui
+RESTANTE_EXPEDIENTE=$(( EXP_SECS - TRABALHADO_MANHA - BANCO_SECS ))
 SAIDA_SECS=$(( RETORNO_SECS + RESTANTE_EXPEDIENTE ))
-
 HORA_SAIDA=$(to_time "$SAIDA_SECS")
+
+if [ "$BANCO_SECS" -ne 0 ]; then
+    BANCO_ABS=$(( BANCO_SECS < 0 ? -BANCO_SECS : BANCO_SECS ))
+    BANCO_H=$(( BANCO_ABS / 3600 ))
+    BANCO_M=$(( (BANCO_ABS % 3600) / 60 ))
+    if [ "$BANCO_SECS" -lt 0 ]; then
+        SINAL_TXT="negativo (deve horas)"
+    else
+        SINAL_TXT="positivo (crédito)"
+    fi
+    printf "[Info] Banco de horas: %02d:%02d %s\n" "$BANCO_H" "$BANCO_M" "$SINAL_TXT"
+fi
 
 echo -e "Saia às: $HORA_SAIDA\n"
