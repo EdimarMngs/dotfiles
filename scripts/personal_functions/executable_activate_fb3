@@ -1,0 +1,19 @@
+#!/bin/bash
+# /usr/local/bin/activate_fb3
+set -euo pipefail
+
+FB_HOME="/opt/firebird3.0"
+LIB="$FB_HOME/lib"
+
+echo "Limpando links antigos em /usr/lib..."
+sudo find /usr/lib -maxdepth 1 -name 'libfbclient.so*' -exec rm -f {} \;
+
+echo "Recriando links apontando para $FB_HOME..."
+for f in "$LIB"/libfbclient.so*; do
+    name=$(basename "$f")
+    sudo ln -sf "$f" "/usr/lib/$name"
+    echo "  /usr/lib/$name -> $f"
+done
+
+sudo ldconfig
+echo "Firebird client ativo: 3.0 ($FB_HOME)"
