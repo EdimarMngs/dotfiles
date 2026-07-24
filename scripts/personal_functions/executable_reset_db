@@ -2,7 +2,7 @@
 # /usr/local/bin/reset_db
 set -e
 
-DB_CLEAR_PATH="/home/edimarsa/Documents/banco_limpo"
+DB_CLEAR_PATH="$HOME/Documents/banco_limpo"
 DB_OUTPUT_PATH="$HOME/.config/.db_output"
 
 SERVICES=("firebird5.0-superserver.service" "firebird3.0-superserver.service")
@@ -23,8 +23,6 @@ fi
 echo "Instância ativa detectada: $ACTIVE_SERVICE"
 echo "Parando..."
 sudo systemctl stop "$ACTIVE_SERVICE"
-
-setopt local_options rm_star_silent nonomatch
 
 mkdir -p "$DB_OUTPUT_PATH"
 rm -f "$DB_OUTPUT_PATH"/* 2>/dev/null
