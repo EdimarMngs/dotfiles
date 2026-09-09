@@ -1,0 +1,127 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Sisweb Debug",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/@angular/cli/bin/ng",
+      "env": {
+        "NODE_OPTIONS": "--max-old-space-size=4096"
+      },
+      "args": [
+        "serve",
+        "sisweb",
+        "--port",
+        "4200"
+      ],
+      "serverReadyAction": {
+        "action": "startDebugging",
+        "name": "Debug Chrome",
+        "pattern": "✔ Compiled successfully.",
+        "killOnServerStop": true
+      },
+      "console": "integratedTerminal",
+      "presentation": {
+        "group": "Dev",
+        "order": 1
+      }
+    },
+    {
+      "name": "Cadastros",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/@angular/cli/bin/ng",
+      "args": [
+        "serve",
+        "cadastros",
+        "--port",
+        "4201"
+      ],
+      "console": "integratedTerminal",
+      "presentation": {
+        "hidden": true
+      }
+    },
+    {
+      "name": "Agendador",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/@angular/cli/bin/ng",
+      "args": [
+        "serve",
+        "agendador",
+        "--port",
+        "4200"
+      ],
+      "serverReadyAction": {
+        "action": "startDebugging",
+        "name": "Debug Chrome",
+        "pattern": "✔ Compiled successfully.",
+        "killOnServerStop": true
+      },
+      "console": "integratedTerminal",
+      "presentation": {
+        "group": "Dev",
+        "order": 1
+      }
+    },
+    {
+      "name": "Assinador Debug",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/@angular/cli/bin/ng",
+      "args": [
+        "serve",
+        "assinador-pdf",
+        "--port",
+        "4200"
+      ],
+      "serverReadyAction": {
+        "action": "startDebugging",
+        "name": "Debug Chrome",
+        "pattern": "✔ Compiled successfully.",
+        "killOnServerStop": true
+      },
+      "console": "integratedTerminal",
+      "presentation": {
+        "group": "Dev",
+        "order": 1
+      }
+    },
+    {
+      "name": "Debug Chrome",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:4200/#/",
+      "webRoot": "${workspaceFolder}",
+      "runtimeArgs": [
+        "--auto-open-devtools-for-tabs",
+        "--incognito",
+        "--disable-http-cache"
+      ],
+      "userDataDir": "${workspaceFolder}/.vscode/chrome-debug",
+      "cascadeTerminateToConfigurations": [
+        "Sisweb Debug"
+      ],
+      "presentation": {
+        "hidden": true
+      },
+      "postDebugTask": "kill-typescript-process"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Sisweb + Cadastros",
+      "configurations": [
+        "Sisweb Debug",
+        "Cadastros"
+      ],
+      "stopAll": true,
+      "presentation": {
+        "group": "Dev",
+        "order": 2
+      }
+    }
+  ]
+}

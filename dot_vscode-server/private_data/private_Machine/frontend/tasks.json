@@ -1,0 +1,15 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "kill-typescript-process",
+      "type": "shell",
+      "command": "sleep 5 && ss -tunpl | grep -P ':(4200|4201|4202|4203)' | grep -o 'pid=[0-9]*' | grep -o '[0-9]*' | xargs kill -KILL &> /dev/null || true",
+      "presentation": {
+        "reveal": "silent",
+        "clear": true
+      },
+      "problemMatcher": []
+    }
+  ]
+}
