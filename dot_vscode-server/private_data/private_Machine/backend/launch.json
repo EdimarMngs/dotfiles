@@ -1,0 +1,58 @@
+{
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Spring Boot-SisWebApplication<Sisweb>",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "mainClass": "br.com.mngs.web.sisweb.SisWebApplication",
+      "args": [
+        // "--check-fks",
+        // "--check-fields"
+      ],
+      "projectName": "sisweb",
+      "env": {
+        // "MNG_CFGDIR": "/home/edimarsa/Documents/instituto_horacio_figueiredo",
+      },
+      // "preLaunchTask": "mvn-clean-install",
+      "postDebugTask": "kill-java-processes",
+      "stepFilters": {
+        "filters": [
+          "java.*",
+          "javax.*",
+          "jdk.*",
+          "sun.*",
+          "com.sun.*",
+          "org.springframework.*",
+          "org.hibernate.*",
+          "jakarta.persistence.*",
+          "com.fasterxml.jackson.*",
+          "org.mapstruct.*",
+          "lombok.*",
+          "org.slf4j.*",
+          "io.sentry.*",
+          "org.apache.logging.*",
+          "org.apache.tomcat.*",
+          "jakarta.servlet.*",
+          "org.apache.commons.*",
+          "commons-io.*",
+          "com.google.common.*",
+          "com.google.gson.*",
+          "org.json.*",
+          "org.quartz.*",
+          "com.github.ben_manes.caffeine.*",
+          "io.jsonwebtoken.*",
+          "net.sf.jasperreports.*",
+          "com.openhtmltopdf.*",
+          "org.jsoup.*"
+        ],
+        "skipClasses": [
+          "$JDK",
+          "junit.*"
+        ],
+        "skipSynthetics": true,
+        "skipStaticInitializers": true
+      }
+    }
+  ]
+}

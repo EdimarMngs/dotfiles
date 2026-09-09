@@ -1,0 +1,33 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "mvn-clean-install",
+      "type": "shell",
+      "command": "mvn clean install",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": [],
+      "icon": {
+        "color": "terminal.ansiBlue",
+        "id": "bookmark"
+      }
+    },
+    {
+      "label": "kill-java-processes",
+      "type": "shell",
+      "command": "sleep 5 && ss -tunpl | grep -P ':(5000|8089)' | grep -o 'pid=[0-9]*' | grep -o '[0-9]*' | xargs kill -KILL &> /dev/null || true",
+      "presentation": {
+        "reveal": "silent",
+        "clear": true
+      },
+      "problemMatcher": []
+    }
+  ]
+}
