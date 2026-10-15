@@ -1,6 +1,50 @@
 #! /bin/bash
 
-FORMATO="${1:-textile}"
+FORMATO="textile"
+INCLUIR_PROMPT=false
+
+usage() {
+    cat <<EOF
+Uso: $(basename "$0") [opções]
+
+Opções:
+  -f, --formato <ext>   Extensão do arquivo de saída (default: textile)
+  -p, --prompt          Inclui prompt + template Textile para uso com IA (DeepSeek)
+  -h, --help            Mostra esta ajuda
+
+Exemplos:
+  $(basename "$0")                    # relatório simples, extensão .textile
+  $(basename "$0") -f txt             # relatório simples, extensão .txt
+  $(basename "$0") -p                 # prompt + template + log, pronto para colar
+  $(basename "$0") -p -f txt          # idem, extensão .txt
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -f|--formato)
+            if [[ -z "$2" ]]; then
+                echo "Erro: -f/--formato requer um argumento." >&2
+                exit 1
+            fi
+            FORMATO="$2"
+            shift 2
+            ;;
+        -p|--prompt)
+            INCLUIR_PROMPT=true
+            shift
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        *)
+            echo "Erro: opção desconhecida '$1'." >&2
+            usage >&2
+            exit 1
+            ;;
+    esac
+done
 
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
 if [ -z "$CURRENT_BRANCH" ]; then
@@ -27,19 +71,121 @@ SAFE_FORMATO=$(printf '%s' "$FORMATO" | tr -c 'A-Za-z0-9._-' '_')
 
 TEMP_FILE=$(mktemp /tmp/"${SAFE_BRANCH}"_git_report_XXXXXX."${SAFE_FORMATO}")
 
-IGNORE_PATTERN="node_modules/|target/|build/|dist/|\.gradle/|\.settings/|\.classpath|\.project|ios/Pods/|android/app/build/|package-lock\.json|yarn\.lock|pnpm-lock\.yaml|gradlew|gradlew\.bat|.*\.properties|\.vscode/|environment\.ts|*\.env"
+IGNORE_PATTERN="node_modules/|target/|build/|dist/|\.gradle/|\.settings/|\.classpath|\.project|ios/Pods/|android/app/build/|package-lock\.json|yarn\.lock|pnpm-lock\.yaml|gradlew|gradlew\.bat|.*\.properties|\.vscode/|environment\.ts|\.env($|\.)"
+
+if $INCLUIR_PROMPT; then
+    {
+        echo "Relatório: $CURRENT_BRANCH (Base: $BASE)"
+        echo "Arquivo:   $TEMP_FILE"
+    } >&2
+else
+    {
+        echo "--------------------------------------------------"
+        echo "### RELATÓRIO: $CURRENT_BRANCH (Base: $BASE)"
+        echo "### CAMINHO: $TEMP_FILE"
+        echo "--------------------------------------------------"
+        echo
+    } >"$TEMP_FILE"
+fi
+
+# Bloco do prompt + template (só no modo -p)
+if $INCLUIR_PROMPT; then
+    cat >>"$TEMP_FILE" <<'EOF'
+Você vai gerar um relatório de Merge Request em formato Textile a partir de uma saída de `git log`.
+
+## Contexto
+A entrada é a lista de commits de uma branch de feature (hash, assunto, arquivos alterados). A saída deve ser um relatório técnico no template fornecido abaixo, preenchido com base APENAS no que os commits mostram.
+
+## Regras de preenchimento
+
+### Causa Raiz
+- Liste somente as causas REAIS de comportamento errado (bugs).
+- Numere com `#`.
+- Padrão de cada item: `# *Rótulo curto*: descrição objetiva.`
+- Ordem: (1) o problema do chamado original, (2) problemas secundários descobertos durante o trabalho, (3) efeitos colaterais relevantes.
+- NÃO liste mudanças técnicas habilitadoras (extensão de DTO, ajuste de tipos, refactor) como causa — elas não são bugs, são suporte.
+
+### Soluções aplicadas
+- Liste o que foi feito, na MESMA ORDEM das causas, para manter paralelismo 1:1 (causa 1 → solução 1, etc.).
+- Numere com `#`.
+- Padrão de cada item: `# *Rótulo curto*: descrição objetiva.`
+- Trabalho técnico habilitador (DTO, tipos, refactor) vai POR ÚLTIMO, sem causa correspondente.
+- Se houver duas correções para o mesmo problema, separe-as em itens distintos.
+
+### Formatação Textile
+- Código inline: `@classeOuCampo@` (NÃO use `{{ }}` nem crases).
+- Ênfase: `*negrito*`.
+- Listas ordenadas: `#`. Listas não ordenadas: `*`.
+- Seções: `h1.`, `h2.`, `h3.`
+
+### O que NÃO fazer
+- Não invente causas nem soluções que os commits não sustentem.
+- Não crie seções vazias (se um lado não tem causa, omita o `h2.` correspondente).
+- Não altere nem remova os `____placeholders____` (versões, imagens, labels).
+- Não reordene nem remova o rodapé (tabelas de imagem, Liberado para teste, Branch, Liberada versão final).
+- Não use bullets `*` nas listas de causa/solução — só `#`.
+- Não escreva introdução nem conclusão fora do template.
+
+## Template (preencher os placeholders de descrição, preservar os demais)
+
+h1. Causa Raiz:
+
+h2. Frontend:
+
+# *____rotulo_causa_1____*: ____descricao_causa_1____
+# *____rotulo_causa_2____*: ____descricao_causa_2____
+
+h2. Backend:
+
+# ____descricao_causa_backend____
+
+
+h1. Soluções aplicadas:
+
+h2. Frontend
+
+# *____rotulo_solucao_1____*: ____descricao_solucao_1____
+# *____rotulo_solucao_2____*: ____descricao_solucao_2____
+# *____rotulo_solucao_tecnica____*: ____descricao_solucao_tecnica____
+
+h2. Backend
+
+# ____descricao_solucao_backend____
+
+____tabela_de_imagens_horizontal____
+|_. ____label_imagem_1____ |_. ____label_imagem_2____ |
+| !____imagem_1____! | !____imagem_2____! |
+
+____tabela_de_imagens_vertical____
+|_. ____label_imagem_1____ | !____imagem_1____! |
+|_. ____label_imagem_2____  | !____imagem_2____! |
+
+h3. Liberado para teste nas versões:
+
+|{width:125px; text-align: center;}. - |{width:125px; text-align: center;}. *Aplicação* |{width:125px; text-align: center;}. *Versão* |
+|_/4. *Frontend* |_. *Sisweb* |_. ____versao____ |
+|_. *Cadastros* |_. ____versao____ |
+|_. *Assinador-pdf* |_. ____versao____ |
+|_. *Agendador* |_. ____versao____ |
+|_. *Backend* |_. - |_. ____versao____ |
+
+h3. Branch: ____branch____
+
+h1. Liberada versão final:
+
+|{width:125px; text-align: center;}. - |{width:125px; text-align: center;}. *Versão* |
+|_. *Frontend* |_. ____versao____ |
+|_. *Backend* |_. ____versao____ |
+
+## Git log
+
+EOF
+fi
 
 {
-    echo "--------------------------------------------------"
-    echo "### RELATÓRIO: $CURRENT_BRANCH (Base: $BASE)"
-    echo "### CAMINHO: $TEMP_FILE"
-    echo "--------------------------------------------------"
-
     git log "$FORK_POINT..HEAD" --no-merges --name-only \
-    --pretty=format:"%n[COMMIT %h] %s%n%b%nArquivos:" \
-    --invert-grep --grep='^Merge ' \
-    | grep -Ev "$IGNORE_PATTERN" \
-    | grep -Ev '^\[COMMIT [0-9a-f]+\] Merge '
-} >"$TEMP_FILE"
+        --pretty=format:"%n[COMMIT %h] %s%n%b%nArquivos:" \
+        | grep -Ev "$IGNORE_PATTERN"
+} >>"$TEMP_FILE"
 
 ${EDITOR:-less} "$TEMP_FILE"
