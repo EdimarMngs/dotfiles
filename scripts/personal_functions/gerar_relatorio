@@ -3,9 +3,30 @@
 FORMATO="${1:-textile}"
 
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+if [ -z "$CURRENT_BRANCH" ]; then
+    echo "Erro: não está em um repositório git ou HEAD está detached." >&2
+    exit 1
+fi
+
 BASE=$(git config branch."$CURRENT_BRANCH".vscode-merge-base || echo "origin/main")
+
+if ! git rev-parse --verify --quiet "$BASE" >/dev/null; then
+    echo "Erro: base '$BASE' não encontrada. Verifique a config" \
+         "branch.$CURRENT_BRANCH.vscode-merge-base ou se 'origin/main' existe." >&2
+    exit 1
+fi
+
 FORK_POINT=$(git merge-base "$BASE" "$CURRENT_BRANCH")
-TEMP_FILE=$(mktemp /tmp/"$CURRENT_BRANCH"_git_report_XXXXXX."$FORMATO")
+if [ -z "$FORK_POINT" ]; then
+    echo "Erro: não foi possível calcular o merge-base entre '$BASE' e '$CURRENT_BRANCH'." >&2
+    exit 1
+fi
+
+SAFE_BRANCH=$(printf '%s' "$CURRENT_BRANCH" | tr -c 'A-Za-z0-9._-' '_')
+SAFE_FORMATO=$(printf '%s' "$FORMATO" | tr -c 'A-Za-z0-9._-' '_')
+
+TEMP_FILE=$(mktemp /tmp/"${SAFE_BRANCH}"_git_report_XXXXXX."${SAFE_FORMATO}")
+
 IGNORE_PATTERN="node_modules/|target/|build/|dist/|\.gradle/|\.settings/|\.classpath|\.project|ios/Pods/|android/app/build/|package-lock\.json|yarn\.lock|pnpm-lock\.yaml|gradlew|gradlew\.bat|.*\.properties|\.vscode/|environment\.ts|*\.env"
 
 {
@@ -14,7 +35,7 @@ IGNORE_PATTERN="node_modules/|target/|build/|dist/|\.gradle/|\.settings/|\.class
     echo "### CAMINHO: $TEMP_FILE"
     echo "--------------------------------------------------"
 
-    git log "$FORK_POINT..HEAD" --name-only --pretty=format:"%n[COMMIT %h] %s%n%b%nArquivos:" | grep -Ev "$IGNORE_PATTERN"
+    git log "$FORK_POINT..HEAD" --no-merges --name-only --pretty=format:"%n[COMMIT %h] %s%n%b%nArquivos:" | grep -Ev "$IGNORE_PATTERN"
 } >"$TEMP_FILE"
 
 ${EDITOR:-less} "$TEMP_FILE"
