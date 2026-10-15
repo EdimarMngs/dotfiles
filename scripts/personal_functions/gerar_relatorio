@@ -1,0 +1,20 @@
+#! /bin/bash
+
+FORMATO="${1:-textile}"
+
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+BASE=$(git config branch."$CURRENT_BRANCH".vscode-merge-base || echo "origin/main")
+FORK_POINT=$(git merge-base "$BASE" "$CURRENT_BRANCH")
+TEMP_FILE=$(mktemp /tmp/"$CURRENT_BRANCH"_git_report_XXXXXX."$FORMATO")
+IGNORE_PATTERN="node_modules/|target/|build/|dist/|\.gradle/|\.settings/|\.classpath|\.project|ios/Pods/|android/app/build/|package-lock\.json|yarn\.lock|pnpm-lock\.yaml|gradlew|gradlew\.bat|.*\.properties|\.vscode/|environment\.ts|*\.env"
+
+{
+    echo "--------------------------------------------------"
+    echo "### RELATÓRIO: $CURRENT_BRANCH (Base: $BASE)"
+    echo "### CAMINHO: $TEMP_FILE"
+    echo "--------------------------------------------------"
+
+    git log "$FORK_POINT..HEAD" --name-only --pretty=format:"%n[COMMIT %h] %s%n%b%nArquivos:" | grep -Ev "$IGNORE_PATTERN"
+} >"$TEMP_FILE"
+
+${EDITOR:-less} "$TEMP_FILE"
