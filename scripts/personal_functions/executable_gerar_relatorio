@@ -35,7 +35,11 @@ IGNORE_PATTERN="node_modules/|target/|build/|dist/|\.gradle/|\.settings/|\.class
     echo "### CAMINHO: $TEMP_FILE"
     echo "--------------------------------------------------"
 
-    git log "$FORK_POINT..HEAD" --no-merges --name-only --pretty=format:"%n[COMMIT %h] %s%n%b%nArquivos:" | grep -Ev "$IGNORE_PATTERN"
+    git log "$FORK_POINT..HEAD" --no-merges --name-only \
+    --pretty=format:"%n[COMMIT %h] %s%n%b%nArquivos:" \
+    --invert-grep --grep='^Merge ' \
+    | grep -Ev "$IGNORE_PATTERN" \
+    | grep -Ev '^\[COMMIT [0-9a-f]+\] Merge '
 } >"$TEMP_FILE"
 
 ${EDITOR:-less} "$TEMP_FILE"
