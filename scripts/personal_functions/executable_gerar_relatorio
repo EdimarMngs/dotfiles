@@ -132,33 +132,37 @@ h1. Causa Raiz:
 
 h2. Frontend:
 
-# *____rotulo_causa_1____*: ____descricao_causa_1____
-# *____rotulo_causa_2____*: ____descricao_causa_2____
+# *____rotulo_causa_1_frontend____*: ____descricao_causa_1____
+# *____rotulo_causa_2_frontend____*: ____descricao_causa_2____
 
 h2. Backend:
 
-# ____descricao_causa_backend____
+# *____rotulo_causa_1_backend____*: ____descricao_causa_1____
+# *____rotulo_causa_2_backend____*: ____descricao_causa_2____
 
 
 h1. Soluções aplicadas:
 
 h2. Frontend
 
-# *____rotulo_solucao_1____*: ____descricao_solucao_1____
-# *____rotulo_solucao_2____*: ____descricao_solucao_2____
+# *____rotulo_solucao_1_frontend____*: ____descricao_solucao_1____
+# *____rotulo_solucao_2_frontend____*: ____descricao_solucao_2____
 # *____rotulo_solucao_tecnica____*: ____descricao_solucao_tecnica____
 
 h2. Backend
 
-# ____descricao_solucao_backend____
+# *____rotulo_solucao_1_backend____*: ____descricao_solucao_1____
+# *____rotulo_solucao_2_backend____*: ____descricao_solucao_2____
+# *____rotulo_solucao_tecnica____*: ____descricao_solucao_tecnica____
 
 ____tabela_de_imagens_horizontal____
-|_. ____label_imagem_1____ |_. ____label_imagem_2____ |
-| !____imagem_1____! | !____imagem_2____! |
+|_. ____label_imagem_1____ |_. ____label_imagem_2____ |_. ____label_imagem_3____ |
+|_. !____imagem_1____! |_. !____imagem_2____! |_. !____imagem_3____! |
 
 ____tabela_de_imagens_vertical____
-|_. ____label_imagem_1____ | !____imagem_1____! |
-|_. ____label_imagem_2____  | !____imagem_2____! |
+|_. ____label_imagem_1____ |_. !____imagem_1____! |
+|_. ____label_imagem_2____  |_. !____imagem_2____! |
+|_. ____label_imagem_3____  |_. !____imagem_3____! |
 
 h3. Liberado para teste nas versões:
 
@@ -180,6 +184,10 @@ h1. Liberada versão final:
 ## Git log
 
 EOF
+
+sed -i "s/____branch____/$CURRENT_BRANCH/g" "$TEMP_FILE"
+PATCH_VERSION=$(date --date='TZ="America/Sao_Paulo" now' +%Y%m.%d.____patch____)
+sed -i "s/____versao____/$PATCH_VERSION/g" "$TEMP_FILE"
 fi
 
 {
@@ -188,4 +196,4 @@ fi
         | grep -Ev "$IGNORE_PATTERN"
 } >>"$TEMP_FILE"
 
-${EDITOR:-less} "$TEMP_FILE"
+${EDITOR:-vi} "$TEMP_FILE"
