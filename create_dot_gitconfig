@@ -37,15 +37,15 @@
 	apply-env = "!f() { git stash apply $(git stash list | grep 'envs_dev' | cut -d: -f1 | head -n 1); }; f"
 	unapply-env = "!f() { \
     ID=$(git stash list | grep 'envs_dev' | cut -d: -f1 | head -n 1); \
-    if [ -n \"$ID\" ]; then \
-        files=$( { git show --pretty='' --name-only $ID; git show --pretty='' --name-only $ID^3 2>/dev/null; } | tr '\\n' ' ' ); \
-        if [ -n \"$files\" ]; then \
-            git restore $files; \
-        fi; \
-    fi; \
-}; f"
+		if [ -n \"$ID\" ]; then \
+			files=$( { git show --pretty='' --name-only $ID; git show --pretty='' --name-only $ID^3 2>/dev/null; } | tr '\\n' ' ' ); \
+			if [ -n \"$files\" ]; then \
+				git restore $files; \
+			fi; \
+		fi; \
+	}; f"
 	stash-env = "!f() { git stash drop $(git stash list | grep 'envs_dev' | cut -d: -f1 | head -n 1); git stash save -m 'envs_dev' --include-untracked; }; f"
-	issue = "!f() { if [ -z \"$1\" ]; then echo \"Erro: Digite o número ou nome da issue.\nExemplos:\ngit issue 123\ngit issue 123_fix_1\"; return 1; fi; git switch development; git pull origin development; local branch=issue_$1; git switch -c $branch && git push -u origin $branch; }; f"
+	issue = "!f() { if [ -z \"$1\" ]; then echo \"Erro: Digite o número ou nome da issue.\nExemplos:\ngit issue 123\ngit issue 123_fix_1\"; return 1; fi; name=\"${1#issue_}\"; git switch development; git pull origin development; local branch=\"issue_$name\"; git switch -c \"$branch\" && git push -u origin \"$branch\"; }; f"
 	prune = true
 [rerere]
 	enabled = true
